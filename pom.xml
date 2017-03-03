@@ -3,7 +3,7 @@
     <groupId>org.littleshoot</groupId>
     <artifactId>littleproxy</artifactId>
     <packaging>jar</packaging>
-    <version>1.1.2-SNAPSHOT</version>
+    <version>1.1.2-SNAPSHOT-VGS</version>
     <name>LittleProxy</name>
     <description>
         LittleProxy is a high performance HTTP proxy written in Java and using the Netty networking framework.
@@ -54,16 +54,31 @@
     </scm>
 
     <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
 
         <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>vg-release</id>
+            <name>VG Release Repository</name>
+            <url>s3://very-good/software/release/</url>
         </repository>
+
+        <snapshotRepository>
+            <id>vg-snapshot</id>
+            <name>VG Snapshot Repository</name>
+            <url>s3://very-good/software/snapshot/</url>
+        </snapshotRepository>
+
     </distributionManagement>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>yle-public</id>
+            <name>Yle public repository</name>
+            <url>http://maven.c4.yle.fi/release</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <inceptionYear>2009</inceptionYear>
 
@@ -550,6 +565,15 @@
                 </executions>
             </plugin>
         </plugins>
+
+        <extensions>
+            <extension>
+                <groupId>fi.yle.tools</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>1.4.0</version>
+            </extension>
+        </extensions>
+
     </build>
 
     <reporting>
