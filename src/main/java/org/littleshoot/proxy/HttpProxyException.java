@@ -1,8 +1,10 @@
 package org.littleshoot.proxy;
 
+import com.google.common.base.Joiner;
+
 public class HttpProxyException extends RuntimeException {
 
-  public HttpProxyException(String details, Throwable e) {
-    super(e.getMessage() + ", details: " + details, e);
+  public HttpProxyException(RuntimeException e, String ... details) {
+    super(e.getMessage() + ", details: " + Joiner.on(", ").join(details), e);
   }
 }

@@ -148,7 +148,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     private RuntimeException wrap(RuntimeException ex) {
         HttpRequest currentHttpRequest = getCurrentHttpRequest();
         String host = currentHttpRequest.headers().get("Host");
-        return new HttpProxyException(String.format("Host: %s", host), ex);
+        return new HttpProxyException(ex, String.format("Host: %s", host));
     }
 
     protected abstract HttpRequest getCurrentHttpRequest();
