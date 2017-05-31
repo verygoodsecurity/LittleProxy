@@ -866,7 +866,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             }
         }
 
-        if (!HttpHeaders.isKeepAlive(req)) {
+        if (req != null && !HttpHeaders.isKeepAlive(req)) {
             LOG.debug("Closing client connection since request is not keep alive: {}", req);
             // Here we simply want to close the connection because the
             // client itself has requested it be closed in the request.
