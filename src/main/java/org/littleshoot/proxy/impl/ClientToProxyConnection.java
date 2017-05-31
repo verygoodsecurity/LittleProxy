@@ -26,7 +26,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.BadGatewayFailureHttpResponseComposer;
-import org.littleshoot.proxy.FailureHttpResponseComposer;
+import org.littleshoot.proxy.ServerConnectionFailureHttpResponseComposer;
 import org.littleshoot.proxy.FlowContext;
 import org.littleshoot.proxy.FullFlowContext;
 import org.littleshoot.proxy.HttpFilters;
@@ -633,7 +633,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         serverConnection.disconnect();
         this.serverConnectionsByHostAndPort.remove(serverConnection.getServerHostAndPort());
 
-        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = proxyServer.getUnrecoverableFailureHttpResponseComposer();
+        ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = proxyServer.getUnrecoverableFailureHttpResponseComposer();
         FullHttpResponse failureResponse = unrecoverableFailureHttpResponseComposer.compose(initialRequest, cause);
 
         boolean keepAlive = respondWithShortCircuitResponse(failureResponse);

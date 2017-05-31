@@ -203,7 +203,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withUnrecoverableFailureHttpResponseComposer(
-        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer);
+        ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer);
 
     /**
      * <p>

@@ -27,7 +27,7 @@ import org.littleshoot.proxy.HttpFiltersSource;
 import org.littleshoot.proxy.HttpFiltersSourceAdapter;
 import org.littleshoot.proxy.HttpProxyServer;
 import org.littleshoot.proxy.HttpProxyServerBootstrap;
-import org.littleshoot.proxy.FailureHttpResponseComposer;
+import org.littleshoot.proxy.ServerConnectionFailureHttpResponseComposer;
 import org.littleshoot.proxy.MitmManager;
 import org.littleshoot.proxy.ProxyAuthenticator;
 import org.littleshoot.proxy.SslEngineSource;
@@ -110,7 +110,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ChainedProxyManager chainProxyManager;
     private final MitmManager mitmManager;
     private final HttpFiltersSource filtersSource;
-    private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
+    private final ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
     private volatile int connectTimeout;
     private volatile int idleConnectionTimeout;
@@ -243,7 +243,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             ChainedProxyManager chainProxyManager,
             MitmManager mitmManager,
             HttpFiltersSource filtersSource,
-            FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
+            ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
             int idleConnectionTimeout,
             Collection<ActivityTracker> activityTrackers,
@@ -591,7 +591,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return filtersSource;
     }
 
-    public FailureHttpResponseComposer getUnrecoverableFailureHttpResponseComposer() {
+    public ServerConnectionFailureHttpResponseComposer getUnrecoverableFailureHttpResponseComposer() {
         return unrecoverableFailureHttpResponseComposer;
     }
 
@@ -622,7 +622,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private ChainedProxyManager chainProxyManager = null;
         private MitmManager mitmManager = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
-        private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new BadGatewayFailureHttpResponseComposer();
+        private ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new BadGatewayFailureHttpResponseComposer();
         private boolean transparent = false;
         private int idleConnectionTimeout = 70;
         private Collection<ActivityTracker> activityTrackers = new ConcurrentLinkedQueue<ActivityTracker>();
@@ -653,7 +653,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 ChainedProxyManager chainProxyManager,
                 MitmManager mitmManager,
                 HttpFiltersSource filtersSource,
-                FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
+                ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
                 Collection<ActivityTracker> activityTrackers,
                 int connectTimeout, HostResolver serverResolver,
@@ -815,7 +815,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         public HttpProxyServerBootstrap withUnrecoverableFailureHttpResponseComposer(
-            FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer) {
+            ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer) {
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             return this;
         }

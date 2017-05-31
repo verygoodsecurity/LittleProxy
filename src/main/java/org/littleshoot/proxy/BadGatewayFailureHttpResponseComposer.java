@@ -7,7 +7,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.littleshoot.proxy.impl.ProxyUtils;
 
 
-public final class BadGatewayFailureHttpResponseComposer implements FailureHttpResponseComposer {
+public final class BadGatewayFailureHttpResponseComposer implements ServerConnectionFailureHttpResponseComposer {
 
   /**
    * Tells the client that something went wrong trying to proxy its request. If the Bad Gateway is a response to
