@@ -266,11 +266,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.chainProxyManager = chainProxyManager;
         this.mitmManager = mitmManager;
         this.filtersSource = filtersSource;
-        if (unrecoverableFailureHttpResponseComposer == null) {
-            this.unrecoverableFailureHttpResponseComposer = new BadGatewayFailureHttpResponseComposer();
-        } else {
-            this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
-        }
+        this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
         this.transparent = transparent;
         this.idleConnectionTimeout = idleConnectionTimeout;
         if (activityTrackers != null) {
