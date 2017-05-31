@@ -198,6 +198,14 @@ public interface HttpProxyServerBootstrap {
             HttpFiltersSource filtersSource);
 
     /**
+     *
+     * @param unrecoverableFailureHttpResponseComposer
+     * @return
+     */
+    HttpProxyServerBootstrap withUnrecoverableFailureHttpResponseComposer(
+        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer);
+
+    /**
      * <p>
      * Specify whether or not to use secure DNS lookups for outbound
      * connections.

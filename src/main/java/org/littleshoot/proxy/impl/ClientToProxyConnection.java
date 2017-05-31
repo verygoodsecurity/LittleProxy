@@ -25,6 +25,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.ActivityTracker;
+import org.littleshoot.proxy.BadGatewayFailureHttpResponseComposer;
+import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.FlowContext;
 import org.littleshoot.proxy.FullFlowContext;
 import org.littleshoot.proxy.HttpFilters;
@@ -32,7 +34,6 @@ import org.littleshoot.proxy.HttpFiltersAdapter;
 import org.littleshoot.proxy.ProxyAuthenticator;
 import org.littleshoot.proxy.SslEngineSource;
 
-import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -632,7 +633,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         serverConnection.disconnect();
         this.serverConnectionsByHostAndPort.remove(serverConnection.getServerHostAndPort());
 
-        boolean keepAlive = writeBadGateway(initialRequest, cause);
+        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = proxyServer.getUnrecoverableFailureHttpResponseComposer();
+        FullHttpResponse failureResponse = unrecoverableFailureHttpResponseComposer.compose(initialRequest, cause);
+
+        boolean keepAlive = respondWithShortCircuitResponse(failureResponse);
         if (keepAlive) {
             become(AWAITING_INITIAL);
         } else {
@@ -1195,36 +1199,9 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * Miscellaneous
      **************************************************************************/
 
-    /**
-     * Tells the client that something went wrong trying to proxy its request. If the Bad Gateway is a response to
-     * an HTTP HEAD request, the response will contain no body, but the Content-Length header will be set to the
-     * value it would have been if this 502 Bad Gateway were in response to a GET.
-     *
-     * @param httpRequest the HttpRequest that is resulting in the Bad Gateway response
-     * @return true if the connection will be kept open, or false if it will be disconnected
-     */
-    private boolean writeBadGateway(HttpRequest httpRequest, Throwable cause) {
-        String body = "Bad Gateway: " + httpRequest.getUri();
-        HttpResponseStatus status = HttpResponseStatus.BAD_GATEWAY;
-
-        if (cause instanceof SSLHandshakeException) {
-            final String message = "There was a problem with upstream server certificate";
-            body = message + ": " + httpRequest.getUri();
-            status = new HttpResponseStatus(HttpResponseStatus.BAD_GATEWAY.code(), message);
-        }
-
-        FullHttpResponse response = ProxyUtils.createFullHttpResponse(HttpVersion.HTTP_1_1, status, body);
-
-        if (ProxyUtils.isHEAD(httpRequest)) {
-            // don't allow any body content in response to a HEAD request
-            response.content().clear();
-        }
-
-        return respondWithShortCircuitResponse(response);
-    }
-
     private boolean writeBadGateway (HttpRequest httpRequest) {
-        return writeBadGateway(httpRequest, null);
+        FullHttpResponse badGatewayResponse = new BadGatewayFailureHttpResponseComposer().compose(httpRequest);
+        return respondWithShortCircuitResponse(badGatewayResponse);
     }
 
     /**
