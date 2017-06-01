@@ -216,6 +216,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     }
 
     @Override
+    protected HttpRequest getCurrentHttpRequest() {
+        return currentHttpRequest;
+    }
+
+    @Override
     protected ConnectionState readHTTPInitial(HttpResponse httpResponse) {
         LOG.debug("Received raw response: {}", httpResponse);
 

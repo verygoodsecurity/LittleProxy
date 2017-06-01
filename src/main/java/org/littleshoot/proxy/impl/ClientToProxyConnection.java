@@ -176,6 +176,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         LOG.debug("Created ClientToProxyConnection");
     }
 
+    @Override
+    protected HttpRequest getCurrentHttpRequest() {
+        return currentRequest;
+    }
+
     /***************************************************************************
      * Reading
      **************************************************************************/
