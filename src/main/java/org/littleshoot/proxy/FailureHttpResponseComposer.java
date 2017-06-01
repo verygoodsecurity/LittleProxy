@@ -12,7 +12,7 @@ public interface FailureHttpResponseComposer {
    * Creates an {@link FullHttpResponse} based on initial request and failure cause
    * @param httpRequest initial request
    * @param cause an exception thrown during a failure
-   * @return failure http response 
+   * @return failure http response
    */
   FullHttpResponse compose(HttpRequest httpRequest, Throwable cause);
 }
