@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import org.junit.Test;
 import org.littleshoot.proxy.BadGatewayFailureHttpResponseComposer;
-import org.littleshoot.proxy.ServerConnectionFailureHttpResponseComposer;
+import org.littleshoot.proxy.FailureHttpResponseComposer;
 
 import static org.junit.Assert.assertTrue;
 
@@ -20,7 +20,7 @@ public class DefaultHttpProxyServerTest {
   @Test
   public void testCustomUnrecoverableFailureHttpResponseComposer() {
 
-    class CustomUnrecoverableFailureHttpResponseComposer implements ServerConnectionFailureHttpResponseComposer {
+    class CustomUnrecoverableFailureHttpResponseComposer implements FailureHttpResponseComposer {
       @Override
       public FullHttpResponse compose(HttpRequest httpRequest, Throwable cause) {
         return null;

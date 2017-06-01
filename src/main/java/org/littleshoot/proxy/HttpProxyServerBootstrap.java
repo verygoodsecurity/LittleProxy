@@ -198,12 +198,20 @@ public interface HttpProxyServerBootstrap {
             HttpFiltersSource filtersSource);
 
     /**
+     * <p>
+     * Specify a {@link FailureHttpResponseComposer} to use for composing
+     * custom response message on unrecoverable failure
+     * </p>
      *
-     * @param unrecoverableFailureHttpResponseComposer
+     * <p>
+     * Default = {@link BadGatewayFailureHttpResponseComposer}
+     * </p>
+     *
+     * @param unrecoverableFailureHttpResponseComposer custom response message composer
      * @return
      */
     HttpProxyServerBootstrap withUnrecoverableFailureHttpResponseComposer(
-        ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer);
+        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer);
 
     /**
      * <p>

@@ -6,8 +6,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.littleshoot.proxy.impl.ProxyUtils;
 
-
-public final class BadGatewayFailureHttpResponseComposer implements ServerConnectionFailureHttpResponseComposer {
+public class BadGatewayFailureHttpResponseComposer implements FailureHttpResponseComposer {
 
   /**
    * Tells the client that something went wrong trying to proxy its request. If the Bad Gateway is a response to
@@ -20,7 +19,7 @@ public final class BadGatewayFailureHttpResponseComposer implements ServerConnec
    */
   @Override
   public FullHttpResponse compose(HttpRequest httpRequest, Throwable cause) {
-    String body = "Bad Gateway: " + httpRequest.getUri();
+    String body = provideCustomMessage(httpRequest, cause);
 
     FullHttpResponse response = ProxyUtils.createFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY, body);
 
@@ -31,7 +30,13 @@ public final class BadGatewayFailureHttpResponseComposer implements ServerConnec
     return response;
   }
 
-  public FullHttpResponse compose(HttpRequest httpRequest) {
-    return this.compose(httpRequest, null);
+  /**
+   * The method can be overridden to provide a custom message along with 502 code
+   * @param httpRequest initial request
+   * @param cause an exception thrown on a failure
+   * @return custom message
+   */
+  protected String provideCustomMessage(HttpRequest httpRequest, Throwable cause) {
+    return "Bad Gateway: " + httpRequest.getUri();
   }
 }

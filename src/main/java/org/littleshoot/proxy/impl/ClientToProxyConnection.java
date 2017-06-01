@@ -26,7 +26,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.BadGatewayFailureHttpResponseComposer;
-import org.littleshoot.proxy.ServerConnectionFailureHttpResponseComposer;
+import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.FlowContext;
 import org.littleshoot.proxy.FullFlowContext;
 import org.littleshoot.proxy.HttpFilters;
@@ -633,7 +633,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         serverConnection.disconnect();
         this.serverConnectionsByHostAndPort.remove(serverConnection.getServerHostAndPort());
 
-        ServerConnectionFailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = proxyServer.getUnrecoverableFailureHttpResponseComposer();
+        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = proxyServer.getUnrecoverableFailureHttpResponseComposer();
         FullHttpResponse failureResponse = unrecoverableFailureHttpResponseComposer.compose(initialRequest, cause);
 
         boolean keepAlive = respondWithShortCircuitResponse(failureResponse);
@@ -1199,8 +1199,16 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * Miscellaneous
      **************************************************************************/
 
-    private boolean writeBadGateway (HttpRequest httpRequest) {
-        FullHttpResponse badGatewayResponse = new BadGatewayFailureHttpResponseComposer().compose(httpRequest);
+    /**
+     * Tells the client that something went wrong trying to proxy its request. If the Bad Gateway is a response to
+     * an HTTP HEAD request, the response will contain no body, but the Content-Length header will be set to the
+     * value it would have been if this 502 Bad Gateway were in response to a GET.
+     *
+     * @param httpRequest the HttpRequest that is resulting in the Bad Gateway response
+     * @return true if the connection will be kept open, or false if it will be disconnected
+     */
+    private boolean writeBadGateway(HttpRequest httpRequest) {
+        FullHttpResponse badGatewayResponse = new BadGatewayFailureHttpResponseComposer().compose(httpRequest, null);
         return respondWithShortCircuitResponse(badGatewayResponse);
     }
 
