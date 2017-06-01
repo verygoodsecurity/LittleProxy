@@ -1,6 +1,7 @@
 package org.littleshoot.proxy;
 
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import org.junit.Test;
 
@@ -44,6 +45,30 @@ public class BadGatewayFailureHttpResponseComposerTest {
     assertEquals(502, response.getStatus().code());
     assertEquals("Bad Gateway", response.getStatus().reasonPhrase());
     assertEquals("Invalid certificate: " + REQUEST_URI, new String(response.content().array()));
+  }
+
+  @Test
+  public void testClearedContent() throws IOException {
+    FailureHttpResponseComposer badGatewayResponseComposer = new BadGatewayFailureHttpResponseComposer();
+
+    HttpRequest initialRequest = mock(HttpRequest.class);
+    when(initialRequest.getUri()).thenReturn(REQUEST_URI);
+
+    FullHttpResponse response = badGatewayResponseComposer.compose(initialRequest, new RuntimeException());
+
+    assertEquals(502, response.getStatus().code());
+
+    assertEquals(0, response.content().readerIndex());
+    assertNotEquals(0, response.content().writerIndex());
+
+    when(initialRequest.getMethod()).thenReturn(HttpMethod.HEAD);
+
+    response = badGatewayResponseComposer.compose(initialRequest, new RuntimeException());
+
+    assertEquals(502, response.getStatus().code());
+
+    assertEquals(0, response.content().readerIndex());
+    assertEquals(0, response.content().writerIndex());
   }
 
 }
