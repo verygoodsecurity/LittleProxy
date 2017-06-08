@@ -1,16 +1,14 @@
 package org.littleshoot.proxy;
 
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import org.littleshoot.proxy.extras.SelfSignedMitmManager;
+import org.littleshoot.proxy.extras.SelfSignedMitmManagerFactory;
 
 import java.nio.charset.Charset;
 import java.util.HashSet;
-import java.util.Queue;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.hasItem;

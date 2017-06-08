@@ -1,7 +1,8 @@
-package org.littleshoot.proxy;
+package org.littleshoot.proxy.extras;
 
 import io.netty.channel.Channel;
-import org.littleshoot.proxy.extras.SelfSignedMitmManager;
+import org.littleshoot.proxy.MitmManager;
+import org.littleshoot.proxy.MitmManagerFactory;
 
 /**
  * The factory for self signed mitm manager
