@@ -41,12 +41,7 @@ public class MitmWithChainedProxyTest extends BaseChainedProxyTest {
                 .withPort(0)
                 .withChainProxyManager(chainedProxyManager())
                 .plusActivityTracker(DOWNSTREAM_TRACKER)
-                .withManInTheMiddle(new MitmManagerFactory() {
-                    @Override
-                    public MitmManager getInstance(Channel channel) {
-                        return new SelfSignedMitmManager();
-                    }
-                })
+                .withManInTheMiddle(new SelfSignedMitmManagerFactory())
                 .withFiltersSource(new HttpFiltersSourceAdapter() {
                     @Override
                     public HttpFilters filterRequest(HttpRequest originalRequest) {

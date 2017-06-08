@@ -15,12 +15,7 @@ public class MITMUsernamePasswordAuthenticatingProxyTest extends
         this.proxyServer = bootstrapProxy()
                 .withPort(0)
                 .withProxyAuthenticator(this)
-                .withManInTheMiddle(new MitmManagerFactory() {
-                    @Override
-                    public MitmManager getInstance(Channel channel) {
-                        return new SelfSignedMitmManager();
-                    }
-                })
+                .withManInTheMiddle(new SelfSignedMitmManagerFactory())
                 .start();
     }
 

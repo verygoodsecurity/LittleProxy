@@ -101,12 +101,7 @@ public class Launcher {
 
         if (cmd.hasOption(OPTION_MITM)) {
             LOG.info("Running as Man in the Middle");
-            bootstrap.withManInTheMiddle(new MitmManagerFactory() {
-                @Override
-                public MitmManager getInstance(Channel channel) {
-                    return new SelfSignedMitmManager();
-                }
-            });
+            bootstrap.withManInTheMiddle(new SelfSignedMitmManagerFactory());
         }
         
         if (cmd.hasOption(OPTION_DNSSEC)) {

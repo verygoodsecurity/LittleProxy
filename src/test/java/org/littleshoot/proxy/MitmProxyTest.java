@@ -32,12 +32,7 @@ public class MitmProxyTest extends BaseProxyTest {
     protected void setUp() {
         this.proxyServer = bootstrapProxy()
                 .withPort(0)
-                .withManInTheMiddle(new MitmManagerFactory() {
-                    @Override
-                    public MitmManager getInstance(Channel channel) {
-                        return new SelfSignedMitmManager();
-                    }
-                })
+                .withManInTheMiddle(new SelfSignedMitmManagerFactory())
                 .withFiltersSource(new HttpFiltersSourceAdapter() {
                     @Override
                     public HttpFilters filterRequest(HttpRequest originalRequest) {
