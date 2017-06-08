@@ -556,7 +556,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                         serverConnection.HTTPCONNECTWithChainedProxy);
             }        	
         	
-            MitmManager mitmManager = proxyServer.getMitmManager();
+            MitmManager mitmManager = proxyServer.getMitmManager(clientConnection.channel);
             boolean isMitmEnabled = mitmManager != null;
 
             if (isMitmEnabled) {
@@ -568,10 +568,10 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 // SNI may be disabled for this request due to a previous failed attempt to connect to the server
                 // with SNI enabled.
                 if (disableSni) {
-                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager()
+                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager(clientConnection.channel)
                             .serverSslEngine()));
                 } else {
-                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager()
+                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager(clientConnection.channel)
                             .serverSslEngine(parsedHostAndPort.getHostText(), parsedHostAndPort.getPort())));
                 }
 
@@ -643,7 +643,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         protected Future<?> execute() {
             LOG.debug("Handling CONNECT request through Chained Proxy");
             chainedProxy.filterRequest(initialRequest);
-            MitmManager mitmManager = proxyServer.getMitmManager();
+            MitmManager mitmManager = proxyServer.getMitmManager(clientConnection.channel);
             boolean isMitmEnabled = mitmManager != null;
             /*
              * We ignore the LastHttpContent which we read from the client
@@ -720,7 +720,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         @Override
         protected Future<?> execute() {
             return clientConnection
-                    .encrypt(proxyServer.getMitmManager()
+                    .encrypt(proxyServer.getMitmManager(clientConnection.channel)
                             .clientSslEngineFor(initialRequest, sslEngine.getSession()), false)
                     .addListener(
                             new GenericFutureListener<Future<? super Channel>>() {

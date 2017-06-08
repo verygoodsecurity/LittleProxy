@@ -1,5 +1,6 @@
 package org.littleshoot.proxy;
 
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
@@ -31,7 +32,12 @@ public class MitmProxyTest extends BaseProxyTest {
     protected void setUp() {
         this.proxyServer = bootstrapProxy()
                 .withPort(0)
-                .withManInTheMiddle(new SelfSignedMitmManager())
+                .withManInTheMiddle(new MitmManagerFactory() {
+                    @Override
+                    public MitmManager getInstance(Channel channel) {
+                        return new SelfSignedMitmManager();
+                    }
+                })
                 .withFiltersSource(new HttpFiltersSourceAdapter() {
                     @Override
                     public HttpFilters filterRequest(HttpRequest originalRequest) {

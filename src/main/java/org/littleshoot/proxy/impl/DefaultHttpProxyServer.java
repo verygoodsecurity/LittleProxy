@@ -29,6 +29,7 @@ import org.littleshoot.proxy.HttpProxyServer;
 import org.littleshoot.proxy.HttpProxyServerBootstrap;
 import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.MitmManager;
+import org.littleshoot.proxy.MitmManagerFactory;
 import org.littleshoot.proxy.ProxyAuthenticator;
 import org.littleshoot.proxy.SslEngineSource;
 import org.littleshoot.proxy.TransportProtocol;
@@ -108,7 +109,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final boolean authenticateSslClients;
     private final ProxyAuthenticator proxyAuthenticator;
     private final ChainedProxyManager chainProxyManager;
-    private final MitmManager mitmManager;
+    private final MitmManagerFactory mitmManagerFactory;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
@@ -205,7 +206,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
      * @param chainProxyManager
      *            The proxy to send requests to if chaining proxies. Typically
      *            <code>null</code>.
-     * @param mitmManager
+     * @param mitmManagerFactory
      *            The {@link MitmManager} to use for man in the middle'ing
      *            CONNECT requests
      * @param filtersSource
@@ -241,7 +242,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             boolean authenticateSslClients,
             ProxyAuthenticator proxyAuthenticator,
             ChainedProxyManager chainProxyManager,
-            MitmManager mitmManager,
+            MitmManagerFactory mitmManagerFactory,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
@@ -264,7 +265,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.authenticateSslClients = authenticateSslClients;
         this.proxyAuthenticator = proxyAuthenticator;
         this.chainProxyManager = chainProxyManager;
-        this.mitmManager = mitmManager;
+        this.mitmManagerFactory = mitmManagerFactory;
         this.filtersSource = filtersSource;
         this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
         this.transparent = transparent;
@@ -399,7 +400,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     authenticateSslClients,
                     proxyAuthenticator,
                     chainProxyManager,
-                    mitmManager,
+                    mitmManagerFactory,
                     filtersSource,
                     unrecoverableFailureHttpResponseComposer,
                     transparent,
@@ -571,8 +572,11 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return chainProxyManager;
     }
 
-    protected MitmManager getMitmManager() {
-        return mitmManager;
+    protected MitmManager getMitmManager(Channel channel) {
+        if (mitmManagerFactory != null) {
+            return mitmManagerFactory.getInstance(channel);
+        }
+        return null;
     }
 
     protected SslEngineSource getSslEngineSource() {
@@ -616,7 +620,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private boolean authenticateSslClients = true;
         private ProxyAuthenticator proxyAuthenticator = null;
         private ChainedProxyManager chainProxyManager = null;
-        private MitmManager mitmManager = null;
+        private MitmManagerFactory mitmManager = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new BadGatewayFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -647,7 +651,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 boolean authenticateSslClients,
                 ProxyAuthenticator proxyAuthenticator,
                 ChainedProxyManager chainProxyManager,
-                MitmManager mitmManager,
+                MitmManagerFactory mitmManager,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -793,7 +797,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         @Override
         public HttpProxyServerBootstrap withManInTheMiddle(
-                MitmManager mitmManager) {
+                MitmManagerFactory mitmManager) {
             this.mitmManager = mitmManager;
             if (this.sslEngineSource != null) {
                 LOG.warn("Enabled man in the middle with encrypted inbound connections. "

@@ -1,5 +1,6 @@
 package org.littleshoot.proxy;
 
+import io.netty.channel.Channel;
 import org.littleshoot.proxy.extras.SelfSignedMitmManager;
 
 /**
@@ -14,7 +15,12 @@ public class MITMUsernamePasswordAuthenticatingProxyTest extends
         this.proxyServer = bootstrapProxy()
                 .withPort(0)
                 .withProxyAuthenticator(this)
-                .withManInTheMiddle(new SelfSignedMitmManager())
+                .withManInTheMiddle(new MitmManagerFactory() {
+                    @Override
+                    public MitmManager getInstance(Channel channel) {
+                        return new SelfSignedMitmManager();
+                    }
+                })
                 .start();
     }
 

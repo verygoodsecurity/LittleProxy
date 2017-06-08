@@ -1,5 +1,6 @@
 package org.littleshoot.proxy;
 
+import io.netty.channel.Channel;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -100,7 +101,12 @@ public class Launcher {
 
         if (cmd.hasOption(OPTION_MITM)) {
             LOG.info("Running as Man in the Middle");
-            bootstrap.withManInTheMiddle(new SelfSignedMitmManager());
+            bootstrap.withManInTheMiddle(new MitmManagerFactory() {
+                @Override
+                public MitmManager getInstance(Channel channel) {
+                    return new SelfSignedMitmManager();
+                }
+            });
         }
         
         if (cmd.hasOption(OPTION_DNSSEC)) {

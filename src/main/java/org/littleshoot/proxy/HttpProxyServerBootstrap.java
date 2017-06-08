@@ -102,7 +102,7 @@ public interface HttpProxyServerBootstrap {
      * </p>
      * 
      * <p>
-     * Note - This and {@link #withManInTheMiddle(MitmManager)} are
+     * Note - This and {@link #withManInTheMiddle(MitmManagerFactory)} are
      * mutually exclusive.
      * </p>
      * 
@@ -179,7 +179,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withManInTheMiddle(
-            MitmManager mitmManager);
+            MitmManagerFactory mitmManager);
 
     /**
      * <p>
