@@ -620,7 +620,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private boolean authenticateSslClients = true;
         private ProxyAuthenticator proxyAuthenticator = null;
         private ChainedProxyManager chainProxyManager = null;
-        private MitmManagerFactory mitmManager = null;
+        private MitmManagerFactory mitmManagerFactory = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new BadGatewayFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -651,7 +651,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 boolean authenticateSslClients,
                 ProxyAuthenticator proxyAuthenticator,
                 ChainedProxyManager chainProxyManager,
-                MitmManagerFactory mitmManager,
+                MitmManagerFactory mitmManagerFactory,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -673,7 +673,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.authenticateSslClients = authenticateSslClients;
             this.proxyAuthenticator = proxyAuthenticator;
             this.chainProxyManager = chainProxyManager;
-            this.mitmManager = mitmManager;
+            this.mitmManagerFactory = mitmManagerFactory;
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             this.transparent = transparent;
@@ -766,10 +766,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         public HttpProxyServerBootstrap withSslEngineSource(
                 SslEngineSource sslEngineSource) {
             this.sslEngineSource = sslEngineSource;
-            if (this.mitmManager != null) {
+            if (this.mitmManagerFactory != null) {
                 LOG.warn("Enabled encrypted inbound connections with man in the middle. "
                         + "These are mutually exclusive - man in the middle will be disabled.");
-                this.mitmManager = null;
+                this.mitmManagerFactory = null;
             }
             return this;
         }
@@ -797,8 +797,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         @Override
         public HttpProxyServerBootstrap withManInTheMiddle(
-                MitmManagerFactory mitmManager) {
-            this.mitmManager = mitmManager;
+                MitmManagerFactory mitmManagerFactory) {
+            this.mitmManagerFactory = mitmManagerFactory;
             if (this.sslEngineSource != null) {
                 LOG.warn("Enabled man in the middle with encrypted inbound connections. "
                         + "These are mutually exclusive - encrypted inbound connections will be disabled.");
@@ -922,7 +922,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             return new DefaultHttpProxyServer(serverGroup,
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
-                    proxyAuthenticator, chainProxyManager, mitmManager,
+                    proxyAuthenticator, chainProxyManager, mitmManagerFactory,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
