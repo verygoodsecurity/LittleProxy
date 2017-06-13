@@ -3,6 +3,7 @@ package org.littleshoot.proxy;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -29,11 +30,16 @@ public class BadGatewayFailureHttpResponseComposerTest {
   }
 
   @Test
-  public void testCustomMessage() throws IOException {
+  public void testCustomMessageAndStatus() throws IOException {
     FailureHttpResponseComposer badGatewayResponseComposer = new BadGatewayFailureHttpResponseComposer() {
       @Override
       protected String provideCustomMessage(HttpRequest httpRequest, Throwable cause) {
         return "Invalid certificate: " + httpRequest.getUri();
+      }
+
+      @Override
+      protected HttpResponseStatus provideCustomStatus(HttpRequest httpRequest, Throwable cause) {
+        return new HttpResponseStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Something is wrong");
       }
     };
 
@@ -42,8 +48,8 @@ public class BadGatewayFailureHttpResponseComposerTest {
 
     FullHttpResponse response = badGatewayResponseComposer.compose(initialRequest, new RuntimeException());
 
-    assertEquals(502, response.getStatus().code());
-    assertEquals("Bad Gateway", response.getStatus().reasonPhrase());
+    assertEquals(500, response.getStatus().code());
+    assertEquals("Something is wrong", response.getStatus().reasonPhrase());
     assertEquals("Invalid certificate: " + REQUEST_URI, new String(response.content().array()));
   }
 

@@ -20,8 +20,9 @@ public class BadGatewayFailureHttpResponseComposer implements FailureHttpRespons
   @Override
   public FullHttpResponse compose(HttpRequest httpRequest, Throwable cause) {
     String body = provideCustomMessage(httpRequest, cause);
+    HttpResponseStatus status = provideCustomStatus(httpRequest, cause);
 
-    FullHttpResponse response = ProxyUtils.createFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY, body);
+    FullHttpResponse response = ProxyUtils.createFullHttpResponse(HttpVersion.HTTP_1_1, status, body);
 
     if (ProxyUtils.isHEAD(httpRequest)) {
       // don't allow any body content in response to a HEAD request
@@ -38,5 +39,9 @@ public class BadGatewayFailureHttpResponseComposer implements FailureHttpRespons
    */
   protected String provideCustomMessage(HttpRequest httpRequest, Throwable cause) {
     return "Bad Gateway: " + httpRequest.getUri();
+  }
+
+  protected HttpResponseStatus provideCustomStatus(HttpRequest httpRequest, Throwable cause) {
+    return HttpResponseStatus.BAD_GATEWAY;
   }
 }
