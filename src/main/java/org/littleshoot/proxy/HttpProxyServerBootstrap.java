@@ -204,7 +204,7 @@ public interface HttpProxyServerBootstrap {
      * </p>
      *
      * <p>
-     * Default = {@link BadGatewayFailureHttpResponseComposer}
+     * Default = {@link DefaultFailureHttpResponseComposer}
      * </p>
      *
      * @param unrecoverableFailureHttpResponseComposer custom response message composer

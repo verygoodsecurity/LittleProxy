@@ -11,13 +11,13 @@ import java.io.IOException;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-public class BadGatewayFailureHttpResponseComposerTest {
+public class DefaultFailureHttpResponseComposerTest {
 
   private static final String REQUEST_URI = "https://localhost/hi";
 
   @Test
   public void testDefault() throws IOException {
-    FailureHttpResponseComposer badGatewayResponseComposer = new BadGatewayFailureHttpResponseComposer();
+    FailureHttpResponseComposer badGatewayResponseComposer = new DefaultFailureHttpResponseComposer();
 
     HttpRequest initialRequest = mock(HttpRequest.class);
     when(initialRequest.getUri()).thenReturn(REQUEST_URI);
@@ -31,7 +31,7 @@ public class BadGatewayFailureHttpResponseComposerTest {
 
   @Test
   public void testCustomMessageAndStatus() throws IOException {
-    FailureHttpResponseComposer badGatewayResponseComposer = new BadGatewayFailureHttpResponseComposer() {
+    FailureHttpResponseComposer badGatewayResponseComposer = new DefaultFailureHttpResponseComposer() {
       @Override
       protected String provideCustomMessage(HttpRequest httpRequest, Throwable cause) {
         return "Invalid certificate: " + httpRequest.getUri();
@@ -55,7 +55,7 @@ public class BadGatewayFailureHttpResponseComposerTest {
 
   @Test
   public void testClearedContent() throws IOException {
-    FailureHttpResponseComposer badGatewayResponseComposer = new BadGatewayFailureHttpResponseComposer();
+    FailureHttpResponseComposer badGatewayResponseComposer = new DefaultFailureHttpResponseComposer();
 
     HttpRequest initialRequest = mock(HttpRequest.class);
     when(initialRequest.getUri()).thenReturn(REQUEST_URI);

@@ -25,7 +25,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.ActivityTracker;
-import org.littleshoot.proxy.BadGatewayFailureHttpResponseComposer;
+import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
 import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.FlowContext;
 import org.littleshoot.proxy.FullFlowContext;
@@ -1208,7 +1208,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @return true if the connection will be kept open, or false if it will be disconnected
      */
     private boolean writeBadGateway(HttpRequest httpRequest) {
-        FullHttpResponse badGatewayResponse = new BadGatewayFailureHttpResponseComposer().compose(httpRequest, null);
+        FullHttpResponse badGatewayResponse = new DefaultFailureHttpResponseComposer().compose(httpRequest, null);
         return respondWithShortCircuitResponse(badGatewayResponse);
     }
 
