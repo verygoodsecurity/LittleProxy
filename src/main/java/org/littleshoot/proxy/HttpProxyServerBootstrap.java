@@ -181,6 +181,22 @@ public interface HttpProxyServerBootstrap {
     HttpProxyServerBootstrap withManInTheMiddle(
             MitmManagerFactory mitmManager);
 
+
+    /**
+     * <p>
+     * Specify an {@link ProxyToServerExHandler} to handle proxy to server errors
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param proxyToServerExHandler
+     * @return
+     */
+    HttpProxyServerBootstrap withProxyToServerExHandler(
+        ProxyToServerExHandler proxyToServerExHandler);
+
     /**
      * <p>
      * Specify a {@link HttpFiltersSource} to use for filtering requests and/or
