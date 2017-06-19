@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -137,6 +138,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * Minimum size of the adaptive recv buffer when throttling is enabled. 
      */
     private static final int MINIMUM_RECV_BUFFER_SIZE_BYTES = 64;
+
+    public static final AttributeKey<InetSocketAddress> remoteAddressAttrKey = AttributeKey.valueOf("remoteAddressAttrKey");
     
     /**
      * Create a new ProxyToServerConnection.
@@ -527,6 +530,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      */
     private void connectAndWrite(HttpRequest initialRequest) {
         LOG.debug("Starting new connection to: {}", remoteAddress);
+
+        this.clientConnection.channel.attr(remoteAddressAttrKey).set(remoteAddress);
 
         // Remember our initial request so that we can write it after connecting
         this.initialRequest = initialRequest;
