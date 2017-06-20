@@ -442,7 +442,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             } else {
                 ExceptionHandler exHandler = proxyServer.getProxyToServerExHandler();
                 if (exHandler != null) {
-                    LOG.debug("Custom exception handler is used to process the cause");
+                    LOG.debug("Custom exception handler '" + exHandler.toString() + "' invoked", cause);
                     exHandler.handle(cause);
                 } else {
                     LOG.error("Caught an exception on ProxyToServerConnection", cause);
