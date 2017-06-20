@@ -1,6 +1,6 @@
 package org.littleshoot.proxy;
 
-public interface ProxyToServerExHandler {
+public interface ExceptionHandler {
 
   /**
    * Handles proxy to server error

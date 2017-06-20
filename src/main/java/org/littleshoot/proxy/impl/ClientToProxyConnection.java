@@ -26,6 +26,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.BadGatewayFailureHttpResponseComposer;
+import org.littleshoot.proxy.ExceptionHandler;
 import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.FlowContext;
 import org.littleshoot.proxy.FullFlowContext;
@@ -755,7 +756,13 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 LOG.info("An executor rejected a read or write operation on the ClientToProxyConnection (this is normal if the proxy is shutting down). Message: " + cause.getMessage());
                 LOG.debug("A RejectedExecutionException occurred on ClientToProxyConnection", cause);
             } else {
-                LOG.error("Caught an exception on ClientToProxyConnection", cause);
+                ExceptionHandler exHandler = proxyServer.getClientToProxyExHandler();
+                if (exHandler != null) {
+                    LOG.debug("Custom exception handler is used to process the cause");
+                    exHandler.handle(cause);
+                } else {
+                    LOG.error("Caught an exception on ClientToProxyConnection", cause);
+                }
             }
         } finally {
             // always disconnect the client when an exception occurs on the channel

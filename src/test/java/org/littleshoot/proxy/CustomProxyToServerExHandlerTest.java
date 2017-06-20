@@ -9,7 +9,7 @@ import java.util.List;
 
 public class CustomProxyToServerExHandlerTest extends MitmWithBadServerAuthenticationTCPChainedProxyTest {
 
-  private List<Throwable> customExHandlerEntered = new ArrayList<>();
+  private final List<Throwable> customExHandlerEntered = new ArrayList<>();
 
   @Override
   protected void setUp() {
@@ -20,7 +20,7 @@ public class CustomProxyToServerExHandlerTest extends MitmWithBadServerAuthentic
         .withChainProxyManager(chainedProxyManager())
         .plusActivityTracker(DOWNSTREAM_TRACKER)
         .withManInTheMiddle(new SelfSignedMitmManagerFactory())
-        .withProxyToServerExHandler(new ProxyToServerExHandler() {
+        .withProxyToServerExHandler(new ExceptionHandler() {
           @Override
           public void handle(Throwable cause) {
             customExHandlerEntered.add(cause);
@@ -35,7 +35,7 @@ public class CustomProxyToServerExHandlerTest extends MitmWithBadServerAuthentic
   }
 
   @Test
-  public void testCustomExHandler() throws Exception {
+  public void testCustomProxyToServerExHandler() throws Exception {
     super.testSimpleGetRequestOverHTTPS();
     Assert.assertFalse("Custom ex handler was not called", customExHandlerEntered.isEmpty());
     Assert.assertEquals("Incorrect exception was passed to custom ex handles",

@@ -31,7 +31,7 @@ import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.MitmManager;
 import org.littleshoot.proxy.MitmManagerFactory;
 import org.littleshoot.proxy.ProxyAuthenticator;
-import org.littleshoot.proxy.ProxyToServerExHandler;
+import org.littleshoot.proxy.ExceptionHandler;
 import org.littleshoot.proxy.SslEngineSource;
 import org.littleshoot.proxy.TransportProtocol;
 import org.littleshoot.proxy.UnknownTransportProtocolException;
@@ -111,7 +111,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ProxyAuthenticator proxyAuthenticator;
     private final ChainedProxyManager chainProxyManager;
     private final MitmManagerFactory mitmManagerFactory;
-    private final ProxyToServerExHandler proxyToServerExHandler;
+    private final ExceptionHandler clientToProxyExHandler;
+    private final ExceptionHandler proxyToServerExHandler;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
@@ -245,7 +246,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             ProxyAuthenticator proxyAuthenticator,
             ChainedProxyManager chainProxyManager,
             MitmManagerFactory mitmManagerFactory,
-            ProxyToServerExHandler proxyToServerExHandler,
+            ExceptionHandler clientToProxyExHandler,
+            ExceptionHandler proxyToServerExHandler,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
@@ -269,6 +271,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.proxyAuthenticator = proxyAuthenticator;
         this.chainProxyManager = chainProxyManager;
         this.mitmManagerFactory = mitmManagerFactory;
+        this.clientToProxyExHandler = clientToProxyExHandler;
         this.proxyToServerExHandler = proxyToServerExHandler;
         this.filtersSource = filtersSource;
         this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
@@ -405,6 +408,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     proxyAuthenticator,
                     chainProxyManager,
                     mitmManagerFactory,
+                    clientToProxyExHandler,
                     proxyToServerExHandler,
                     filtersSource,
                     unrecoverableFailureHttpResponseComposer,
@@ -584,7 +588,11 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return null;
     }
 
-    protected ProxyToServerExHandler getProxyToServerExHandler() {
+    protected ExceptionHandler getClientToProxyExHandler() {
+        return clientToProxyExHandler;
+    }
+
+    protected ExceptionHandler getProxyToServerExHandler() {
         return proxyToServerExHandler;
     }
 
@@ -630,7 +638,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private ProxyAuthenticator proxyAuthenticator = null;
         private ChainedProxyManager chainProxyManager = null;
         private MitmManagerFactory mitmManagerFactory = null;
-        private ProxyToServerExHandler proxyToServerExHandler = null;
+        private ExceptionHandler clientToProxyExHandler = null;
+        private ExceptionHandler proxyToServerExHandler = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new BadGatewayFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -662,7 +671,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 ProxyAuthenticator proxyAuthenticator,
                 ChainedProxyManager chainProxyManager,
                 MitmManagerFactory mitmManagerFactory,
-                ProxyToServerExHandler proxyToServerExHandler,
+                ExceptionHandler clientToProxyExHandler,
+                ExceptionHandler proxyToServerExHandler,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -685,6 +695,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.proxyAuthenticator = proxyAuthenticator;
             this.chainProxyManager = chainProxyManager;
             this.mitmManagerFactory = mitmManagerFactory;
+            this.clientToProxyExHandler = clientToProxyExHandler;
             this.proxyToServerExHandler = proxyToServerExHandler;
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
@@ -821,8 +832,15 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         @Override
         public HttpProxyServerBootstrap withProxyToServerExHandler(
-            ProxyToServerExHandler proxyToServerExHandler) {
+            ExceptionHandler proxyToServerExHandler) {
             this.proxyToServerExHandler = proxyToServerExHandler;
+            return this;
+        }
+
+        @Override
+        public HttpProxyServerBootstrap withClientToProxyExHandler(
+            ExceptionHandler clientToProxyExHandler) {
+            this.clientToProxyExHandler = clientToProxyExHandler;
             return this;
         }
 
@@ -941,7 +959,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             return new DefaultHttpProxyServer(serverGroup,
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
-                    proxyAuthenticator, chainProxyManager, mitmManagerFactory, proxyToServerExHandler,
+                    proxyAuthenticator, chainProxyManager, mitmManagerFactory,
+                    clientToProxyExHandler, proxyToServerExHandler,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,

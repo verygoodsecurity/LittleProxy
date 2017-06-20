@@ -39,7 +39,7 @@ import org.littleshoot.proxy.ChainedProxyManager;
 import org.littleshoot.proxy.FullFlowContext;
 import org.littleshoot.proxy.HttpFilters;
 import org.littleshoot.proxy.MitmManager;
-import org.littleshoot.proxy.ProxyToServerExHandler;
+import org.littleshoot.proxy.ExceptionHandler;
 import org.littleshoot.proxy.TransportProtocol;
 import org.littleshoot.proxy.UnknownTransportProtocolException;
 
@@ -440,8 +440,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 LOG.info("An executor rejected a read or write operation on the ProxyToServerConnection (this is normal if the proxy is shutting down). Message: " + cause.getMessage());
                 LOG.debug("A RejectedExecutionException occurred on ProxyToServerConnection", cause);
             } else {
-                ProxyToServerExHandler exHandler = proxyServer.getProxyToServerExHandler();
+                ExceptionHandler exHandler = proxyServer.getProxyToServerExHandler();
                 if (exHandler != null) {
+                    LOG.debug("Custom exception handler is used to process the cause");
                     exHandler.handle(cause);
                 } else {
                     LOG.error("Caught an exception on ProxyToServerConnection", cause);
