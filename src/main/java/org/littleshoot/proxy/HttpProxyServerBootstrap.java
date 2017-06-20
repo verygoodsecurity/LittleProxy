@@ -183,7 +183,7 @@ public interface HttpProxyServerBootstrap {
 
     /**
      * <p>
-     * Specify an {@link ExceptionHandler} to handle proxy to server errors
+     * Specify an {@link ExceptionHandler} to handle client to proxy errors
      * </p>
      *
      * <p>
@@ -191,7 +191,7 @@ public interface HttpProxyServerBootstrap {
      * </p>
      *
      * @param clientToProxyExHandler
-     * @return
+     * @return exception handler
      */
     HttpProxyServerBootstrap withClientToProxyExHandler(
         ExceptionHandler clientToProxyExHandler);
@@ -206,7 +206,7 @@ public interface HttpProxyServerBootstrap {
      * </p>
      *
      * @param proxyToServerExHandler
-     * @return
+     * @return exception handler
      */
     HttpProxyServerBootstrap withProxyToServerExHandler(
         ExceptionHandler proxyToServerExHandler);

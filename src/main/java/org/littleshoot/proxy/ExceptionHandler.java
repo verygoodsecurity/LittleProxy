@@ -3,7 +3,8 @@ package org.littleshoot.proxy;
 public interface ExceptionHandler {
 
   /**
-   * Handles proxy to server error
+   * Handles proxy exception
+   * 
    * @param cause error cause
    */
   void handle(Throwable cause);
