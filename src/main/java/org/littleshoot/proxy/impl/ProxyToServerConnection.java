@@ -139,7 +139,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      */
     private static final int MINIMUM_RECV_BUFFER_SIZE_BYTES = 64;
 
-    public static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_ATTR_KEY = AttributeKey.valueOf("REMOTE_ADDRESS_ATTR_KEY");
+    public static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_ATTR_KEY = AttributeKey.valueOf("remoteAddressAttrKey");
     
     /**
      * Create a new ProxyToServerConnection.
