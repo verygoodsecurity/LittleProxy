@@ -139,7 +139,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      */
     private static final int MINIMUM_RECV_BUFFER_SIZE_BYTES = 64;
 
-    public static final AttributeKey<InetSocketAddress> remoteAddressAttrKey = AttributeKey.valueOf("remoteAddressAttrKey");
+    public static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_ATTR_KEY = AttributeKey.valueOf("REMOTE_ADDRESS_ATTR_KEY");
     
     /**
      * Create a new ProxyToServerConnection.
@@ -531,7 +531,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void connectAndWrite(HttpRequest initialRequest) {
         LOG.debug("Starting new connection to: {}", remoteAddress);
 
-        this.clientConnection.channel.attr(remoteAddressAttrKey).set(remoteAddress);
+        this.clientConnection.channel.attr(REMOTE_ADDRESS_ATTR_KEY).set(remoteAddress);
 
         // Remember our initial request so that we can write it after connecting
         this.initialRequest = initialRequest;
