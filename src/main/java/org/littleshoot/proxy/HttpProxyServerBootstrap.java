@@ -183,6 +183,36 @@ public interface HttpProxyServerBootstrap {
 
     /**
      * <p>
+     * Specify an {@link ExceptionHandler} to handle client to proxy errors
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param clientToProxyExHandler
+     * @return exception handler
+     */
+    HttpProxyServerBootstrap withClientToProxyExHandler(
+        ExceptionHandler clientToProxyExHandler);
+
+    /**
+     * <p>
+     * Specify an {@link ExceptionHandler} to handle proxy to server errors
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param proxyToServerExHandler
+     * @return exception handler
+     */
+    HttpProxyServerBootstrap withProxyToServerExHandler(
+        ExceptionHandler proxyToServerExHandler);
+
+    /**
+     * <p>
      * Specify a {@link HttpFiltersSource} to use for filtering requests and/or
      * responses through this proxy.
      * </p>
