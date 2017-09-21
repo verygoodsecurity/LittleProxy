@@ -742,6 +742,43 @@ abstract class ProxyConnection<I extends HttpObject> extends
         protected abstract void responseRead(HttpResponse httpResponse);
     }
 
+    @Sharable
+    protected class InboundGlobalState extends
+        ChannelInboundHandlerAdapter {
+
+        private final ProxyConnection<HttpRequest> clientToProxyConnection;
+
+        InboundGlobalState(ProxyConnection<HttpRequest> clientToProxyConnection) {
+            this.clientToProxyConnection = clientToProxyConnection;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg)
+            throws Exception {
+            proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
+            super.channelRead(ctx, msg);
+        }
+    }
+
+    @Sharable
+    protected class OutboundGlobalState extends
+        ChannelOutboundHandlerAdapter {
+
+        private final ProxyConnection<HttpRequest> clientToProxyConnection;
+
+        OutboundGlobalState(ProxyConnection<HttpRequest> clientToProxyConnection) {
+            this.clientToProxyConnection = clientToProxyConnection;
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx,
+                          Object msg, ChannelPromise promise)
+            throws Exception {
+            proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
+            super.write(ctx, msg, promise);
+        }
+    }
+
     /**
      * Utility handler for monitoring bytes written on this connection.
      */

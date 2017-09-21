@@ -17,6 +17,7 @@ import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.littleshoot.proxy.ActivityTracker;
+import org.littleshoot.proxy.CustomGlobalState;
 import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
 import org.littleshoot.proxy.ChainedProxyManager;
 import org.littleshoot.proxy.DefaultHostResolver;
@@ -113,6 +114,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final MitmManagerFactory mitmManagerFactory;
     private final ExceptionHandler clientToProxyExHandler;
     private final ExceptionHandler proxyToServerExHandler;
+    private final CustomGlobalState customGlobalState;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
@@ -248,6 +250,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             MitmManagerFactory mitmManagerFactory,
             ExceptionHandler clientToProxyExHandler,
             ExceptionHandler proxyToServerExHandler,
+            CustomGlobalState customGlobalState,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
@@ -273,6 +276,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.mitmManagerFactory = mitmManagerFactory;
         this.clientToProxyExHandler = clientToProxyExHandler;
         this.proxyToServerExHandler = proxyToServerExHandler;
+        this.customGlobalState = customGlobalState;
         this.filtersSource = filtersSource;
         this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
         this.transparent = transparent;
@@ -410,6 +414,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     mitmManagerFactory,
                     clientToProxyExHandler,
                     proxyToServerExHandler,
+                    customGlobalState,
                     filtersSource,
                     unrecoverableFailureHttpResponseComposer,
                     transparent,
@@ -596,6 +601,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return proxyToServerExHandler;
     }
 
+    protected CustomGlobalState getCustomGlobalState() {
+        return customGlobalState;
+    }
+
     protected SslEngineSource getSslEngineSource() {
         return sslEngineSource;
     }
@@ -640,6 +649,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private MitmManagerFactory mitmManagerFactory = null;
         private ExceptionHandler clientToProxyExHandler = null;
         private ExceptionHandler proxyToServerExHandler = null;
+        private CustomGlobalState customGlobalState = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -673,6 +683,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 MitmManagerFactory mitmManagerFactory,
                 ExceptionHandler clientToProxyExHandler,
                 ExceptionHandler proxyToServerExHandler,
+                CustomGlobalState customGlobalState,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -697,6 +708,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.mitmManagerFactory = mitmManagerFactory;
             this.clientToProxyExHandler = clientToProxyExHandler;
             this.proxyToServerExHandler = proxyToServerExHandler;
+            this.customGlobalState = customGlobalState;
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             this.transparent = transparent;
@@ -845,6 +857,14 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
+        public HttpProxyServerBootstrap withCustomGlobalState(
+            CustomGlobalState customGlobalState) {
+            this.customGlobalState = customGlobalState;
+            return this;
+        }
+
+
+        @Override
         public HttpProxyServerBootstrap withFiltersSource(
                 HttpFiltersSource filtersSource) {
             this.filtersSource = filtersSource;
@@ -960,7 +980,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler,
+                    clientToProxyExHandler, proxyToServerExHandler, customGlobalState,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
