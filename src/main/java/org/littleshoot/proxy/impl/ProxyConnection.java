@@ -755,8 +755,12 @@ abstract class ProxyConnection<I extends HttpObject> extends
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-            proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
-            super.channelRead(ctx, msg);
+            try {
+                proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
+                super.channelRead(ctx, msg);
+            } finally {
+                proxyServer.getCustomGlobalState().clear();
+            }
         }
     }
 
@@ -774,8 +778,12 @@ abstract class ProxyConnection<I extends HttpObject> extends
         public void write(ChannelHandlerContext ctx,
                           Object msg, ChannelPromise promise)
             throws Exception {
-            proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
-            super.write(ctx, msg, promise);
+            try {
+                proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
+                super.write(ctx, msg, promise);
+            } finally {
+                proxyServer.getCustomGlobalState().clear();
+            }
         }
     }
 

@@ -791,6 +791,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
+//        if (proxyServer.getCustomGlobalState() != null) {
+//            pipeline.addLast("inboundGlobalState", new InboundGlobalState(clientConnection));
+//        }
+
         pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
 
@@ -817,7 +821,17 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
+
+
+
         pipeline.addLast("handler", this);
+
+        if (proxyServer.getCustomGlobalState() != null) {
+            pipeline.addLast("outboundGlobalState", new OutboundGlobalState(this));
+//            proxyServer.getCustomGlobalState().restore(this.channel);
+        }
+
+
     }
 
     /**

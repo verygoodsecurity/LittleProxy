@@ -1,8 +1,11 @@
 package org.littleshoot.proxy;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 
 public interface CustomGlobalState {
+
+  void persistToChannelCtx(ChannelHandlerContext ctx);
 
   /**
    * A complete proxy request is composed of different channels which
@@ -14,5 +17,8 @@ public interface CustomGlobalState {
    * @param channel client connection channel
    */
   void restore(Channel channel);
+
+
+  void clear();
 
 }
