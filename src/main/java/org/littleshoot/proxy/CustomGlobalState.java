@@ -18,6 +18,13 @@ public interface CustomGlobalState {
    */
   void restore(Channel channel);
 
+  void create(Channel channel);
+
+  void continueSpan(Channel channel);
+
+  void detach(Channel channel);
+
+  void close(Channel channel);
 
   void clear();
 

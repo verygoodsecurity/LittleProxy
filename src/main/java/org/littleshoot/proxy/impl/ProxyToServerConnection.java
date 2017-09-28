@@ -639,6 +639,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             cb.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                     proxyServer.getConnectTimeout());
 
+            proxyServer.getCustomGlobalState().detach(clientConnection.channel);
             if (localAddress != null) {
                 return cb.connect(remoteAddress, localAddress);
             } else {
@@ -881,12 +882,15 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void initChannelPipeline(ChannelPipeline pipeline,
             HttpRequest httpRequest) {
 
-        if (trafficHandler != null) {
-            pipeline.addLast("global-traffic-shaping", trafficHandler);
+//        pipeline.addLast("endPipeline", new EndPipeline(clientConnection));
+//
+        if (proxyServer.getCustomGlobalState() != null) {
+            pipeline.addLast("endProxyToServerOutboundPipeline", new EndProxyToServerOutboundPipeline(clientConnection));
+            pipeline.addLast("startProxyToServerInboundPipeline", new StartProxyToServerInboundPipeline(clientConnection));
         }
 
-        if (proxyServer.getCustomGlobalState() != null) {
-            pipeline.addLast("inboundGlobalState", new InboundGlobalState(clientConnection));
+        if (trafficHandler != null) {
+            pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
 
         pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
@@ -917,8 +921,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         pipeline.addLast("handler", this);
 
         if (proxyServer.getCustomGlobalState() != null) {
-            pipeline.addLast("outboundGlobalState", new OutboundGlobalState(clientConnection));
+            pipeline.addLast("startProxyToServerOutboundPipeline", new StartProxyToServerOutboundPipeline(clientConnection));
+            pipeline.addLast("endProxyToServerInboundPipeline", new EndProxyToServerInboundPipeline(clientConnection));
         }
+//
+//        pipeline.addLast("startPipeline", new StartPipeline(clientConnection));
     }
 
     /**

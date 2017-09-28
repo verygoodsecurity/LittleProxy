@@ -152,6 +152,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             GlobalTrafficShapingHandler globalTrafficShapingHandler) {
         super(AWAITING_INITIAL, proxyServer, false);
 
+//        proxyServer.getCustomGlobalState().create(pipeline.channel());
         initChannelPipeline(pipeline);
 
         if (sslEngineSource != null) {
@@ -791,9 +792,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
-//        if (proxyServer.getCustomGlobalState() != null) {
-//            pipeline.addLast("inboundGlobalState", new InboundGlobalState(clientConnection));
-//        }
+        if (proxyServer.getCustomGlobalState() != null) {
+            pipeline.addLast("startClientToProxyInboundPipeline", new StartClientToProxyInboundPipeline(this));
+            pipeline.addLast("endClientToProxyOutboundPipeline", new EndClientToProxyOutboundPipeline(this));
+        }
 
         pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
@@ -827,8 +829,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         pipeline.addLast("handler", this);
 
         if (proxyServer.getCustomGlobalState() != null) {
-            pipeline.addLast("outboundGlobalState", new OutboundGlobalState(this));
-//            proxyServer.getCustomGlobalState().restore(this.channel);
+            pipeline.addLast("endClientToProxyInboundPipeline", new EndClientToProxyInboundPipeline(this));
+            pipeline.addLast("startClientToProxyOutboundPipeline", new StartClientToProxyOutboundPipeline(this));
         }
 
 

@@ -143,6 +143,7 @@ class ConnectionFlow {
                             io.netty.util.concurrent.Future<?> future)
                             throws Exception {
                         synchronized (connectLock) {
+                            serverConnection.proxyServer.getCustomGlobalState().continueSpan(clientConnection.channel);
                             if (future.isSuccess()) {
                                 LOG.debug("ConnectionFlowStep succeeded");
                                 currentStep
@@ -152,6 +153,7 @@ class ConnectionFlow {
                                         future.cause());
                                 fail(future.cause());
                             }
+                            serverConnection.proxyServer.getCustomGlobalState().detach(clientConnection.channel);
                         }
                     };
                 });
