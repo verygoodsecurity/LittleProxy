@@ -2,21 +2,34 @@ package org.littleshoot.proxy;
 
 import io.netty.channel.Channel;
 
+/**
+ * Netty is not designed for thread local or global state usage.
+ * It guarantees that a channel is handled by only one thread
+ * but that thread is constantly reused by other channels so
+ * the state can be messed up.
+ *
+ * This handler lets serialize the state to a channel so it
+ * can be deserialized when needed.
+ */
 public interface GlobalStateHandler {
 
   /**
-   * A complete proxy request is composed of different channels which
-   * can be handled by different threads. In case a thread local is used
-   * for storing global state (or similar) this architecture can cause problems.
+   * Serializes global state to channel.
    *
-   * This method is invoked before prior to work with channel in the same thread
-   * so it lets restore the state based on client connection channel attributes
+   * @param channel client connection channel
+   */
+  void persistToChannel(Channel channel);
+
+  /**
+   * Deserializes global state from channel.
+   *
    * @param channel client connection channel
    */
   void restoreFromChannel(Channel channel);
 
-  void persistToChannel(Channel channel);
-
+  /**
+   * Clears global state.
+   */
   void clear();
 
 }

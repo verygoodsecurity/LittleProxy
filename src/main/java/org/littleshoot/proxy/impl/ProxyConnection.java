@@ -6,7 +6,6 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -63,9 +62,6 @@ import static org.littleshoot.proxy.impl.ConnectionState.*;
  */
 abstract class ProxyConnection<I extends HttpObject> extends
         SimpleChannelInboundHandler<Object> {
-
-    public final ThreadLocal<String> pipelineTest = new ThreadLocal<>();
-    public static final AttributeKey<String> pipelineTestAttr = AttributeKey.valueOf("pipelineTestAttr");
 
     protected final ProxyConnectionLogger LOG = new ProxyConnectionLogger(this);
 
