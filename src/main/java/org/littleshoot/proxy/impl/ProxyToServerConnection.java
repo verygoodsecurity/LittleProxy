@@ -639,7 +639,6 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             cb.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                     proxyServer.getConnectTimeout());
 
-            proxyServer.getCustomGlobalState().detach(clientConnection.channel);
             if (localAddress != null) {
                 return cb.connect(remoteAddress, localAddress);
             } else {
@@ -882,11 +881,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void initChannelPipeline(ChannelPipeline pipeline,
             HttpRequest httpRequest) {
 
-//        pipeline.addLast("endPipeline", new EndPipeline(clientConnection));
-//
-        if (proxyServer.getCustomGlobalState() != null) {
-            pipeline.addLast("endProxyToServerOutboundPipeline", new EndProxyToServerOutboundPipeline(clientConnection));
-            pipeline.addLast("startProxyToServerInboundPipeline", new StartProxyToServerInboundPipeline(clientConnection));
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(clientConnection));
         }
 
         if (trafficHandler != null) {
@@ -918,14 +914,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        pipeline.addLast("handler", this);
-
-        if (proxyServer.getCustomGlobalState() != null) {
-            pipeline.addLast("startProxyToServerOutboundPipeline", new StartProxyToServerOutboundPipeline(clientConnection));
-            pipeline.addLast("endProxyToServerInboundPipeline", new EndProxyToServerInboundPipeline(clientConnection));
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(clientConnection));
         }
-//
-//        pipeline.addLast("startPipeline", new StartPipeline(clientConnection));
+
+        pipeline.addLast("handler", this);
     }
 
     /**

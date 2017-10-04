@@ -15,9 +15,6 @@ import org.littleshoot.proxy.HttpFilters;
 
 import javax.net.ssl.SSLEngine;
 
-import java.util.Objects;
-import java.util.UUID;
-
 import static org.littleshoot.proxy.impl.ConnectionState.*;
 
 /**
@@ -751,169 +748,31 @@ abstract class ProxyConnection<I extends HttpObject> extends
     }
 
     @Sharable
-    protected class InboundGlobalState extends
+    protected class InboundGlobalStateHandler extends
         ChannelInboundHandlerAdapter {
 
         private final ProxyConnection<HttpRequest> clientToProxyConnection;
 
-        InboundGlobalState(ProxyConnection<HttpRequest> clientToProxyConnection) {
+        InboundGlobalStateHandler(ProxyConnection<HttpRequest> clientToProxyConnection) {
             this.clientToProxyConnection = clientToProxyConnection;
         }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-            try {
-                proxyServer.getCustomGlobalState().clear();
-                proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
-                super.channelRead(ctx, msg);
-            } finally {
-                proxyServer.getCustomGlobalState().clear();
-            }
-        }
-    }
-
-    @Sharable
-    protected class OutboundGlobalState extends
-        ChannelOutboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        OutboundGlobalState(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise)
-            throws Exception {
-            try {
-                proxyServer.getCustomGlobalState().restore(clientToProxyConnection.channel);
-                super.write(ctx, msg, promise);
-            } finally {
-                proxyServer.getCustomGlobalState().clear();
-            }
-        }
-    }
-
-    @Sharable
-    protected class StartProxyToServerOutboundPipeline extends
-        ChannelOutboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        StartProxyToServerOutboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise)
-            throws Exception {
-            proxyServer.getCustomGlobalState().continueSpan(clientToProxyConnection.channel);
-            super.write(ctx, msg, promise);
-        }
-    }
-
-    @Sharable
-    protected class EndProxyToServerOutboundPipeline extends
-        ChannelOutboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        EndProxyToServerOutboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise)
-            throws Exception {
-            proxyServer.getCustomGlobalState().detach(clientToProxyConnection.channel);
-            super.write(ctx, msg, promise);
-        }
-    }
-
-    @Sharable
-    protected class StartProxyToServerInboundPipeline extends
-        ChannelInboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        StartProxyToServerInboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg)
-            throws Exception {
-            proxyServer.getCustomGlobalState().continueSpan(clientToProxyConnection.channel);
+            proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
             super.channelRead(ctx, msg);
-
+            proxyServer.getGlobalStateHandler().clear();
         }
     }
 
     @Sharable
-    protected class EndProxyToServerInboundPipeline extends
-        ChannelInboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        EndProxyToServerInboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg)
-            throws Exception {
-            proxyServer.getCustomGlobalState().detach(clientToProxyConnection.channel);
-            super.channelRead(ctx, msg);
-        }
-    }
-
-    @Sharable
-    protected class StartClientToProxyInboundPipeline extends
-        ChannelInboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        StartClientToProxyInboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg)
-            throws Exception {
-            proxyServer.getCustomGlobalState().create(clientToProxyConnection.channel);
-            super.channelRead(ctx, msg);
-        }
-    }
-
-    @Sharable
-    protected class EndClientToProxyInboundPipeline extends
-        ChannelInboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        EndClientToProxyInboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg)
-            throws Exception {
-            proxyServer.getCustomGlobalState().detach(clientToProxyConnection.channel);
-            super.channelRead(ctx, msg);
-        }
-    }
-
-    @Sharable
-    protected class StartClientToProxyOutboundPipeline extends
+    protected class OutboundGlobalStateHandler extends
         ChannelOutboundHandlerAdapter {
 
         private final ProxyConnection<HttpRequest> clientToProxyConnection;
 
-        StartClientToProxyOutboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
+        OutboundGlobalStateHandler(ProxyConnection<HttpRequest> clientToProxyConnection) {
             this.clientToProxyConnection = clientToProxyConnection;
         }
 
@@ -921,76 +780,12 @@ abstract class ProxyConnection<I extends HttpObject> extends
         public void write(ChannelHandlerContext ctx,
                           Object msg, ChannelPromise promise)
             throws Exception {
-            proxyServer.getCustomGlobalState().continueSpan(clientToProxyConnection.channel);
+            proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
             super.write(ctx, msg, promise);
+            proxyServer.getGlobalStateHandler().clear();
         }
     }
 
-    @Sharable
-    protected class EndClientToProxyOutboundPipeline extends
-        ChannelOutboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        EndClientToProxyOutboundPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise)
-            throws Exception {
-            proxyServer.getCustomGlobalState().close(clientToProxyConnection.channel);
-            super.write(ctx, msg, promise);
-        }
-    }
-
-
-
-    @Sharable
-    protected class StartPipeline extends
-        ChannelOutboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        StartPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise)
-            throws Exception {
-            String value = UUID.randomUUID().toString();
-            clientToProxyConnection.channel.attr(pipelineTestAttr).set(value);
-            clientToProxyConnection.pipelineTest.set(value);
-            super.write(ctx, msg, promise);
-
-        }
-    }
-
-    @Sharable
-    protected class EndPipeline extends
-        ChannelOutboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        EndPipeline(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise)
-            throws Exception {
-            if (!Objects.equals(clientToProxyConnection.pipelineTest.get(),
-                clientToProxyConnection.channel.attr(pipelineTestAttr).get())) {
-                throw new RuntimeException("Not Equal!");
-            }
-            super.write(ctx, msg, promise);
-
-        }
-    }
 
     /**
      * Utility handler for monitoring bytes written on this connection.

@@ -213,18 +213,18 @@ public interface HttpProxyServerBootstrap {
 
     /**
      * <p>
-     * Specify an {@link CustomGlobalState} to customize a global state based on channel attributes
+     * Specify an {@link GlobalStateHandler} to customize a global state based on channel attributes
      * </p>
      *
      * <p>
      * Default = null
      * </p>
      *
-     * @param customGlobalState
+     * @param globalStateHandler
      * @return proxy server bootstrap
      */
     HttpProxyServerBootstrap withCustomGlobalState(
-        CustomGlobalState customGlobalState);
+        GlobalStateHandler globalStateHandler);
 
     /**
      * <p>

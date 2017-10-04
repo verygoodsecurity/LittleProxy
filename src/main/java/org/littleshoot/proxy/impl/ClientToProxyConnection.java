@@ -4,6 +4,7 @@ import com.google.common.io.BaseEncoding;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -152,7 +153,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             GlobalTrafficShapingHandler globalTrafficShapingHandler) {
         super(AWAITING_INITIAL, proxyServer, false);
 
-//        proxyServer.getCustomGlobalState().create(pipeline.channel());
         initChannelPipeline(pipeline);
 
         if (sslEngineSource != null) {
@@ -771,6 +771,15 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
     }
 
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        try {
+            this.proxyServer.getGlobalStateHandler().persistToChannel(ctx.channel());
+        } finally {
+            super.channelRegistered(ctx);
+        }
+    }
+
     /***************************************************************************
      * Connection Management
      **************************************************************************/
@@ -792,9 +801,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
-        if (proxyServer.getCustomGlobalState() != null) {
-            pipeline.addLast("startClientToProxyInboundPipeline", new StartClientToProxyInboundPipeline(this));
-            pipeline.addLast("endClientToProxyOutboundPipeline", new EndClientToProxyOutboundPipeline(this));
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
         }
 
         pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
@@ -823,16 +831,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-
-
-
-        pipeline.addLast("handler", this);
-
-        if (proxyServer.getCustomGlobalState() != null) {
-            pipeline.addLast("endClientToProxyInboundPipeline", new EndClientToProxyInboundPipeline(this));
-            pipeline.addLast("startClientToProxyOutboundPipeline", new StartClientToProxyOutboundPipeline(this));
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
         }
 
+        pipeline.addLast("handler", this);
 
     }
 
