@@ -774,7 +774,9 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         try {
-            this.proxyServer.getGlobalStateHandler().persistToChannel(ctx.channel());
+            if (this.proxyServer.getGlobalStateHandler() != null) {
+                this.proxyServer.getGlobalStateHandler().persistToChannel(ctx.channel());
+            }
         } finally {
             super.channelRegistered(ctx);
         }
