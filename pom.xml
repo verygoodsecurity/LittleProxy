@@ -73,7 +73,7 @@
         <pluginRepository>
             <id>jfog</id>
             <name>jfrog</name>
-            <url>https://dl.bintray.com/vg/vgs-misc</url>
+            <url>https://dl.bintray.com/vg/vgs-oss</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
