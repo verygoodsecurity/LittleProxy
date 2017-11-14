@@ -42,6 +42,7 @@ import org.littleshoot.proxy.MitmManager;
 import org.littleshoot.proxy.TransportProtocol;
 import org.littleshoot.proxy.UnknownTransportProtocolException;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
@@ -545,8 +546,10 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 .then(ConnectChannel);
 
         if (chainedProxy != null && chainedProxy.requiresEncryption()) {
-            connectionFlow.then(serverConnection.EncryptChannel(chainedProxy
-                    .newSslEngine()));
+            InetSocketAddress proxyAddress = chainedProxy.getChainedProxyAddress();
+            SSLEngine engine = proxyAddress.isUnresolved() ? chainedProxy.newSslEngine() :
+                    chainedProxy.newSslEngine(proxyAddress.getHostName(), proxyAddress.getPort());
+            connectionFlow.then(serverConnection.EncryptChannel(engine));
         }
 
         if (ProxyUtils.isCONNECT(initialRequest)) {
@@ -554,7 +557,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             if (hasUpstreamChainedProxy()) {
                 connectionFlow.then(
                         serverConnection.HTTPCONNECTWithChainedProxy);
-            }        	
+            }
         	
             MitmManager mitmManager = proxyServer.getMitmManager();
             boolean isMitmEnabled = mitmManager != null;
@@ -572,7 +575,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                             .serverSslEngine()));
                 } else {
                     connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager()
-                            .serverSslEngine(parsedHostAndPort.getHostText(), parsedHostAndPort.getPort())));
+                            .serverSslEngine(parsedHostAndPort.getHost(), parsedHostAndPort.getPort())));
                 }
 
             	connectionFlow
@@ -958,7 +961,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             throw new UnknownHostException(hostAndPort);
         }
 
-        String host = parsedHostAndPort.getHostText();
+        String host = parsedHostAndPort.getHost();
         int port = parsedHostAndPort.getPortOrDefault(80);
 
         return proxyServer.getServerResolver().resolve(host, port);
