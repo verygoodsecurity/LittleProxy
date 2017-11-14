@@ -559,7 +559,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         if (chainedProxy != null && chainedProxy.requiresEncryption()) {
             InetSocketAddress proxyAddress = chainedProxy.getChainedProxyAddress();
-            SSLEngine engine = proxyAddress.isUnresolved() ? chainedProxy.newSslEngine() :
+
+            SSLEngine engine = proxyAddress == null || proxyAddress.isUnresolved() ? chainedProxy.newSslEngine() :
                     chainedProxy.newSslEngine(proxyAddress.getHostName(), proxyAddress.getPort());
             connectionFlow.then(serverConnection.EncryptChannel(engine));
         }
