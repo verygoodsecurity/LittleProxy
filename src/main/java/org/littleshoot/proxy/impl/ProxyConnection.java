@@ -756,8 +756,11 @@ abstract class ProxyConnection<I extends HttpObject> extends
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-            proxyServer.getRequestTracer().start(clientToProxyConnection.channel);
-            super.channelRead(ctx, msg);
+            try {
+                proxyServer.getRequestTracer().start(clientToProxyConnection.channel);
+            } finally {
+                super.channelRead(ctx, msg);
+            }
         }
 
         @Override
