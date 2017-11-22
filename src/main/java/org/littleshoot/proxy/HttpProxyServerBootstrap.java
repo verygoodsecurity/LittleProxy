@@ -211,6 +211,21 @@ public interface HttpProxyServerBootstrap {
     HttpProxyServerBootstrap withProxyToServerExHandler(
         ExceptionHandler proxyToServerExHandler);
 
+
+    /**
+     * <p>
+     * Specify a {@link RequestTracer} to trace proxy requests
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param requestTracer
+     * @return proxy server bootstrap
+     */
+    HttpProxyServerBootstrap withRequestTracer(RequestTracer requestTracer);
+
     /**
      * <p>
      * Specify an {@link GlobalStateHandler} to customize a global state based on channel attributes

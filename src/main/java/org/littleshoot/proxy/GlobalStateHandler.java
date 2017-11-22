@@ -14,13 +14,6 @@ import io.netty.channel.Channel;
 public interface GlobalStateHandler {
 
   /**
-   * Serializes global state to channel.
-   *
-   * @param channel client connection channel
-   */
-  void persistToChannel(Channel channel);
-
-  /**
    * Deserializes global state from channel.
    *
    * @param channel client connection channel

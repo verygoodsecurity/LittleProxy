@@ -4,7 +4,6 @@ import com.google.common.io.BaseEncoding;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -771,17 +770,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
     }
 
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        try {
-            if (this.proxyServer.getGlobalStateHandler() != null) {
-                this.proxyServer.getGlobalStateHandler().persistToChannel(ctx.channel());
-            }
-        } finally {
-            super.channelRegistered(ctx);
-        }
-    }
-
     /***************************************************************************
      * Connection Management
      **************************************************************************/
@@ -802,6 +790,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      */
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
+
+        if (proxyServer.getRequestTracer() != null) {
+            pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
+        }
 
         if (proxyServer.getGlobalStateHandler() != null) {
             pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));

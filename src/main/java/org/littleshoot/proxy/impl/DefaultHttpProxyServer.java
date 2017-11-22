@@ -33,6 +33,7 @@ import org.littleshoot.proxy.MitmManager;
 import org.littleshoot.proxy.MitmManagerFactory;
 import org.littleshoot.proxy.ProxyAuthenticator;
 import org.littleshoot.proxy.ExceptionHandler;
+import org.littleshoot.proxy.RequestTracer;
 import org.littleshoot.proxy.SslEngineSource;
 import org.littleshoot.proxy.TransportProtocol;
 import org.littleshoot.proxy.UnknownTransportProtocolException;
@@ -114,6 +115,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final MitmManagerFactory mitmManagerFactory;
     private final ExceptionHandler clientToProxyExHandler;
     private final ExceptionHandler proxyToServerExHandler;
+    private final RequestTracer requestTracer;
     private final GlobalStateHandler globalStateHandler;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
@@ -250,6 +252,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             MitmManagerFactory mitmManagerFactory,
             ExceptionHandler clientToProxyExHandler,
             ExceptionHandler proxyToServerExHandler,
+            RequestTracer requestTracer,
             GlobalStateHandler globalStateHandler,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
@@ -276,6 +279,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.mitmManagerFactory = mitmManagerFactory;
         this.clientToProxyExHandler = clientToProxyExHandler;
         this.proxyToServerExHandler = proxyToServerExHandler;
+        this.requestTracer = requestTracer;
         this.globalStateHandler = globalStateHandler;
         this.filtersSource = filtersSource;
         this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
@@ -414,6 +418,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     mitmManagerFactory,
                     clientToProxyExHandler,
                     proxyToServerExHandler,
+                    requestTracer,
                     globalStateHandler,
                     filtersSource,
                     unrecoverableFailureHttpResponseComposer,
@@ -605,6 +610,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return globalStateHandler;
     }
 
+    protected RequestTracer getRequestTracer() {
+        return requestTracer;
+    }
+
     protected SslEngineSource getSslEngineSource() {
         return sslEngineSource;
     }
@@ -649,6 +658,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private MitmManagerFactory mitmManagerFactory = null;
         private ExceptionHandler clientToProxyExHandler = null;
         private ExceptionHandler proxyToServerExHandler = null;
+        private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
@@ -683,6 +693,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 MitmManagerFactory mitmManagerFactory,
                 ExceptionHandler clientToProxyExHandler,
                 ExceptionHandler proxyToServerExHandler,
+                RequestTracer requestTracer,
                 GlobalStateHandler globalStateHandler,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
@@ -708,6 +719,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.mitmManagerFactory = mitmManagerFactory;
             this.clientToProxyExHandler = clientToProxyExHandler;
             this.proxyToServerExHandler = proxyToServerExHandler;
+            this.requestTracer = requestTracer;
             this.globalStateHandler = globalStateHandler;
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
@@ -857,12 +869,18 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
+        public HttpProxyServerBootstrap withRequestTracer(
+            RequestTracer requestTracer) {
+            this.requestTracer = requestTracer;
+            return this;
+        }
+
+        @Override
         public HttpProxyServerBootstrap withCustomGlobalState(
             GlobalStateHandler globalStateHandler) {
             this.globalStateHandler = globalStateHandler;
             return this;
         }
-
 
         @Override
         public HttpProxyServerBootstrap withFiltersSource(
@@ -980,7 +998,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler, globalStateHandler,
+                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
