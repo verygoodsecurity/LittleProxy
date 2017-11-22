@@ -744,8 +744,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     }
 
     @Sharable
-    protected class RequestTracerHandler extends
-        ChannelDuplexHandler {
+    protected class RequestTracerHandler extends ChannelDuplexHandler {
 
         private final ProxyConnection<HttpRequest> clientToProxyConnection;
 
