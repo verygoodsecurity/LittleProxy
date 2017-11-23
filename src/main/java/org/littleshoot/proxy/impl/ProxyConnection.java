@@ -769,7 +769,11 @@ abstract class ProxyConnection<I extends HttpObject> extends
             try {
                 super.write(ctx, msg, promise);
             } finally {
-                proxyServer.getRequestTracer().finish(clientToProxyConnection.channel);
+                try {
+                    proxyServer.getRequestTracer().finish(clientToProxyConnection.channel);
+                } catch (Throwable t) {
+                    LOG.warn("Unable to finish request tracing", t);
+                }
             }
         }
     }
