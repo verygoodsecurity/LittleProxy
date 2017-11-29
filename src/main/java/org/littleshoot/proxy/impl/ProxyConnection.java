@@ -661,12 +661,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
     public final void userEventTriggered(ChannelHandlerContext ctx, Object evt)
             throws Exception {
         try {
+            proxyServer.getGlobalStateHandler().restoreFromChannel(ctx.channel());
             if (evt instanceof IdleStateEvent) {
                 LOG.debug("Got idle");
                 timedOut();
             }
         } finally {
             super.userEventTriggered(ctx, evt);
+            proxyServer.getGlobalStateHandler().clear();
         }
     }
 
