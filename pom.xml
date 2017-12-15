@@ -524,7 +524,6 @@
                 <artifactId>jgitflow-maven-plugin</artifactId>
                 <version>1.0-m5.1</version>
                 <configuration>
-                    <enableSshAgent>true</enableSshAgent>
                     <autoVersionSubmodules>true</autoVersionSubmodules>
                     <allowUntracked>true</allowUntracked>
                     <noDeploy>true</noDeploy>
