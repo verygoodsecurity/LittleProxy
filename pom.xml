@@ -539,6 +539,25 @@
             </plugin>
 
             <plugin>
+                <groupId>external.atlassian.jgitflow</groupId>
+                <artifactId>jgitflow-maven-plugin</artifactId>
+                <version>1.0-m5.1</version>
+                <configuration>
+                    <enableSshAgent>true</enableSshAgent>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <allowUntracked>true</allowUntracked>
+                    <noDeploy>true</noDeploy>
+
+                    <flowInitContext>
+                        <developBranchName>versioning-test</developBranchName>
+                        <masterBranchName>versioning-test</masterBranchName>
+                        <versionTagPrefix/>
+                        <releaseBranchPrefix>release-</releaseBranchPrefix>
+                    </flowInitContext>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>2.4.3</version>
