@@ -17,3 +17,9 @@ deployment:
     owner: verygoodsecurity
     commands:
       - mvn deploy -DskipTests=true
+  release:
+      tag: /.*/
+      commands:
+        - mvn jgitflow:release-start 
+        - mvn jgitflow:release-finish
+        - git push versioning-test
