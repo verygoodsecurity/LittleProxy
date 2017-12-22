@@ -24,5 +24,5 @@ deployment:
         - git config user.name "circleci"
         - git fetch
         - git checkout $RELEASE_BRANCH
-        # - git tag -d $CIRCLE_TAG
+        - git tag -d $CIRCLE_TAG
         - mvn -B -X -e gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG
