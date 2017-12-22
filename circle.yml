@@ -11,7 +11,6 @@ dependencies:
     - mvn clean dependency:go-offline install -Dmaven.test.skip=true --fail-never --threads 5 -B
 test:
   override:
-    - mvn -B  -X -e  gitflow:release-start gitflow:release-finish
     - mvn test -T2C
 deployment:
   snapshot:
