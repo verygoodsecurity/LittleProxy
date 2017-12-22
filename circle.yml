@@ -11,6 +11,7 @@ dependencies:
     - mvn clean dependency:go-offline install -Dmaven.test.skip=true --fail-never --threads 5 -B
 test:
   override:
+    - mvn -B  -X -e  gitflow:release-start gitflow:release-finish
     - mvn test -T2C
 deployment:
   snapshot:
@@ -26,6 +27,5 @@ deployment:
         - git checkout $RELEASE_BRANCH
         - git pull origin $RELEASE_BRANCH
         - git tag -d $CIRCLE_TAG
-        - mvn -B  -X -e  gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals=deploy
+        - mvn -B -X -e gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals=deploy
         - git push origin $RELEASE_BRANCH
-        
