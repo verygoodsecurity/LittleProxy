@@ -99,7 +99,7 @@
                 <jdk>[,1.8)</jdk>
             </activation>
             <properties>
-                <javadoc.opts />
+                <javadoc.opts/>
             </properties>
         </profile>
 
@@ -520,39 +520,28 @@
             </plugin>
 
             <plugin>
-                <groupId>external.atlassian.jgitflow</groupId>
-                <artifactId>jgitflow-maven-plugin</artifactId>
-                <version>1.0-m5.1</version>
+                <groupId>com.amashchenko.maven.plugin</groupId>
+                <artifactId>gitflow-maven-plugin</artifactId>
+                <version>1.8.0</version>
                 <configuration>
-                    <autoVersionSubmodules>true</autoVersionSubmodules>
-                    <allowUntracked>true</allowUntracked>
-                    <noDeploy>true</noDeploy>
+                    <verbose>true</verbose>
+                    <versionDigitToIncrement>2</versionDigitToIncrement>
+                    <releaseRebase>true</releaseRebase>
+                    <pushRemote>false</pushRemote>
+                    <skipTestProject>true</skipTestProject>
+                    <allowSnapshots>true</allowSnapshots>
 
-                    <flowInitContext>
-                        <developBranchName>versioning-test</developBranchName>
-                        <masterBranchName>versioning-test</masterBranchName>
-                        <versionTagPrefix/>
+                    <gitFlowConfig>
+                        <productionBranch>versioning-test</productionBranch>
+                        <developmentBranch>versioning-test</developmentBranch>
                         <releaseBranchPrefix>release-</releaseBranchPrefix>
-                    </flowInitContext>
-                </configuration>
-            </plugin>
+                        <versionTagPrefix></versionTagPrefix>
+                    </gitFlowConfig>
 
-            <plugin>
-                <groupId>external.atlassian.jgitflow</groupId>
-                <artifactId>jgitflow-maven-plugin</artifactId>
-                <version>1.0-m5.1</version>
-                <configuration>
-                    <enableSshAgent>true</enableSshAgent>
-                    <autoVersionSubmodules>true</autoVersionSubmodules>
-                    <allowUntracked>true</allowUntracked>
-                    <noDeploy>true</noDeploy>
-
-                    <flowInitContext>
-                        <developBranchName>versioning-test</developBranchName>
-                        <masterBranchName>versioning-test</masterBranchName>
-                        <versionTagPrefix/>
-                        <releaseBranchPrefix>release-</releaseBranchPrefix>
-                    </flowInitContext>
+                    <commitMessages>
+                        <releaseStartMessage>update versions for @{version} release</releaseStartMessage>
+                        <releaseFinishMessage>update for next development version @{version}</releaseFinishMessage>
+                    </commitMessages>
                 </configuration>
             </plugin>
 

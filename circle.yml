@@ -4,6 +4,7 @@ machine:
     version: oraclejdk8
   environment:
     AWS_PROFILE: vgs-dev
+    RELEASE_BRANCH: versioning-test
 dependencies:
   override:
     - ./env.sh
@@ -20,6 +21,10 @@ deployment:
   release:
       tag: /.*/
       commands:
-        - mvn jgitflow:release-start -X -e -DreleaseVersion=$CIRCLE_TAG
-        - mvn jgitflow:release-finish -X -e
-        - git push versioning-test
+        - git config user.name "circleci"
+        - git fetch
+        - git checkout $RELEASE_BRANCH
+        - git tag -d $CIRCLE_TAG
+        - mvn -B  -X -e  gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals=deploy
+        - git push origin $RELEASE_BRANCH
+        
