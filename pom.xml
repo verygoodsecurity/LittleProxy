@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.littleshoot</groupId>
     <artifactId>littleproxy</artifactId>
@@ -6,7 +8,8 @@
     <version>1.1.5.0-VGS-SNAPSHOT</version>
     <name>LittleProxy</name>
     <description>
-        LittleProxy is a high performance HTTP proxy written in Java and using the Netty networking framework.
+        LittleProxy is a high performance HTTP proxy written in Java and using the Netty networking
+        framework.
     </description>
     <url>http://littleproxy.org</url>
 
@@ -212,29 +215,6 @@
                         <groupId>com.amashchenko.maven.plugin</groupId>
                         <artifactId>gitflow-maven-plugin</artifactId>
                         <version>1.8.0</version>
-                    </plugin>
-                    <plugin>
-                        <groupId>com.amashchenko.maven.plugin</groupId>
-                        <artifactId>gitflow-maven-plugin</artifactId>
-                        <version>1.8.0</version>
-                        <configuration>
-                            <verbose>true</verbose>
-                            <versionDigitToIncrement>2</versionDigitToIncrement>
-                            <releaseRebase>true</releaseRebase>
-                            <pushRemote>false</pushRemote>
-                            <skipTestProject>true</skipTestProject>
-                            <allowSnapshots>true</allowSnapshots>
-                            <gitFlowConfig>
-                                <productionBranch>versioning-test</productionBranch>
-                                <developmentBranch>versioning-test</developmentBranch>
-                                <releaseBranchPrefix>release-</releaseBranchPrefix>
-                                <versionTagPrefix></versionTagPrefix>
-                            </gitFlowConfig>
-                            <commitMessages>
-                                <releaseStartMessage>update versions for @{version} release</releaseStartMessage>
-                                <releaseFinishMessage>update for next development version @{version}</releaseFinishMessage>
-                            </commitMessages>
-                        </configuration>
                     </plugin>
                 </plugins>
             </build>
@@ -536,6 +516,28 @@
                     <groupId>com.amashchenko.maven.plugin</groupId>
                     <artifactId>gitflow-maven-plugin</artifactId>
                     <version>1.8.0</version>
+                    <configuration>
+                        <verbose>true</verbose>
+                        <versionDigitToIncrement>2</versionDigitToIncrement>
+                        <releaseRebase>true</releaseRebase>
+                        <pushRemote>false</pushRemote>
+                        <skipTestProject>true</skipTestProject>
+                        <allowSnapshots>true</allowSnapshots>
+
+                        <gitFlowConfig>
+                            <productionBranch>versioning-test</productionBranch>
+                            <developmentBranch>versioning-test</developmentBranch>
+                            <releaseBranchPrefix>release-</releaseBranchPrefix>
+                            <versionTagPrefix></versionTagPrefix>
+                        </gitFlowConfig>
+
+                        <commitMessages>
+                            <releaseStartMessage>update versions for @{version} release
+                            </releaseStartMessage>
+                            <releaseFinishMessage>update for next development version @{version}
+                            </releaseFinishMessage>
+                        </commitMessages>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -594,8 +596,10 @@
                         <versionTagPrefix></versionTagPrefix>
                     </gitFlowConfig>
                     <commitMessages>
-                        <releaseStartMessage>update versions for @{version} release</releaseStartMessage>
-                        <releaseFinishMessage>update for next development version @{version}</releaseFinishMessage>
+                        <releaseStartMessage>update versions for @{version} release
+                        </releaseStartMessage>
+                        <releaseFinishMessage>update for next development version @{version}
+                        </releaseFinishMessage>
                     </commitMessages>
                 </configuration>
             </plugin>
@@ -631,12 +635,14 @@
                             </filters>
 
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>org.littleshoot.proxy.Launcher</Main-Class>
                                     </manifestEntries>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
                                     <resource>log4j.xml</resource>
                                     <file>src/main/config/log4j.xml</file>
                                 </transformer>
@@ -800,7 +806,9 @@
             <email>a@littleshoot.org</email>
             <organization>LittleShoot</organization>
             <organizationUrl>http://www.littleshoot.org/</organizationUrl>
-            <roles><role>Developer</role></roles>
+            <roles>
+                <role>Developer</role>
+            </roles>
             <timezone>-5</timezone>
         </developer>
 
@@ -810,7 +818,9 @@
             <email>ox@getlantern.org</email>
             <organization>GetLantern</organization>
             <organizationUrl>https://www.getlantern.org/</organizationUrl>
-            <roles><role>Developer</role></roles>
+            <roles>
+                <role>Developer</role>
+            </roles>
             <timezone>-5</timezone>
         </developer>
     </developers>
