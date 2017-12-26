@@ -503,6 +503,32 @@
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>3.0.2</version>
                 </plugin>
+
+                <plugin>
+                    <groupId>com.amashchenko.maven.plugin</groupId>
+                    <artifactId>gitflow-maven-plugin</artifactId>
+                    <version>1.8.0</version>
+                    <configuration>
+                        <verbose>true</verbose>
+                        <versionDigitToIncrement>2</versionDigitToIncrement>
+                        <releaseRebase>true</releaseRebase>
+                        <pushRemote>false</pushRemote>
+                        <skipTestProject>true</skipTestProject>
+                        <allowSnapshots>true</allowSnapshots>
+
+                        <gitFlowConfig>
+                            <productionBranch>versioning-test</productionBranch>
+                            <developmentBranch>versioning-test</developmentBranch>
+                            <releaseBranchPrefix>release-</releaseBranchPrefix>
+                            <versionTagPrefix></versionTagPrefix>
+                        </gitFlowConfig>
+
+                        <commitMessages>
+                            <releaseStartMessage>update versions for @{version} release</releaseStartMessage>
+                            <releaseFinishMessage>update for next development version @{version}</releaseFinishMessage>
+                        </commitMessages>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
 
