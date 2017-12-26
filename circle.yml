@@ -19,7 +19,7 @@ deployment:
     commands:
       - mvn deploy -DskipTests=true
   release:
-      tag: /.*/
+      branch: /.*/
       commands:
         - git config user.name "circleci"
         - git fetch
