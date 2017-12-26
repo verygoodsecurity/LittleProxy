@@ -25,4 +25,10 @@ deployment:
         - git fetch
         - git checkout $RELEASE_BRANCH
         - git tag -d $CIRCLE_TAG
-        - mvn -B -X -e com.amashchenko.maven.plugin:gitflow-maven-plugin:release-start com.amashchenko.maven.plugin:gitflow-maven-plugin:release-finish -DreleaseVersion=$CIRCLE_TAG
+        - mvn -B -X -e com.amashchenko.maven.plugin:gitflow-maven-plugin:release-start com.amashchenko.maven.plugin:gitflow-maven-plugin:release-finish \
+            -DreleaseVersion=$CIRCLE_TAG \
+            -Dverbose=true -DversionDigitToIncrement=2 -DreleaseRebase=true -DpushRemote=false -DskipTestProject=true -DallowSnapshots=true \
+            -DgitFlowConfig.productionBranch=versioning-test -DgitFlowConfig.developmentBranch=versioning-test \
+            -DgitFlowConfig.releaseBranchPrefix=release- -DgitFlowConfig.versionTagPrefix='' \
+            -DcommitMessages.releaseStartMessage='update versions for @{version} release' \
+            -DcommitMessages.releaseFinishMessage='update for next development version @{version}' 
