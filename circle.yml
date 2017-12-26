@@ -11,7 +11,7 @@ dependencies:
     - mvn clean dependency:go-offline install -Dmaven.test.skip=true --fail-never --threads 5 -B
 test:
   override:
-    - mvn test -T2C -DskipTests
+    - mvn test -T2C
 deployment:
   snapshot:
     branch: vgs-edition
@@ -19,12 +19,12 @@ deployment:
     commands:
       - mvn deploy -DskipTests=true
   release:
-      branch: /.*/
+      tag: /.*/
       commands:
         - git config user.name "circleci"
         - git fetch
-#        - git checkout $RELEASE_BRANCH
-#        - git tag -d $CIRCLE_TAG
-        - mvn -B  -X -e  gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG
-#        - git push origin $RELEASE_BRANCH
+        - git checkout $RELEASE_BRANCH
+        - git tag -d $CIRCLE_TAG
+        - mvn -B  -X -e  gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals=deploy
+        - git push origin $RELEASE_BRANCH
         
