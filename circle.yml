@@ -19,11 +19,12 @@ deployment:
     commands:
       - mvn deploy -DskipTests=true
   release:
-      branch: /.*/
+      tag: /.*/
       commands:
         - git config user.name "circleci"
         - git fetch
         - git checkout $RELEASE_BRANCH
+        - git pull origin $RELEASE_BRANCH
         - git tag -d $CIRCLE_TAG
         - mvn -B -X -e gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals=deploy -DskipTests
         - git push origin $RELEASE_BRANCH
