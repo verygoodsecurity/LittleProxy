@@ -2,5 +2,5 @@
 
 if [ "$CIRCLE_TAG" == "" ]
 then
-    mvn test -T2C
+  mvn test -T2C
 fi
