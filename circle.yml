@@ -27,5 +27,6 @@ deployment:
         - git pull origin $RELEASE_BRANCH
         - git reset --hard
         - git tag -d $CIRCLE_TAG
-        - mvn -B -X -e gitflow:release-start gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals=deploy -DskipTests
+        - mvn -B -X -e gitflow:release-start -DreleaseVersion=$CIRCLE_TAG
+        - mvn -B -X -e gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals='deploy -DskipTests'
         - git push origin $RELEASE_BRANCH
