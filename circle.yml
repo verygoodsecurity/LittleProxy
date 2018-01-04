@@ -4,7 +4,7 @@ machine:
     version: oraclejdk8
   environment:
     AWS_PROFILE: vgs-dev
-    RELEASE_BRANCH: versioning-test 
+    RELEASE_BRANCH: versioning-test
 dependencies:
   override:
     - ./env.sh
