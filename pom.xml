@@ -507,16 +507,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>3.0.2</version>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                            </manifest>
-                            <manifestEntries>
-                                <VGS-LittleProxy-Revision>${buildNumber}</VGS-LittleProxy-Revision>
-                            </manifestEntries>
-                        </archive>
-                    </configuration>
                 </plugin>
 
                 <plugin>
@@ -580,8 +570,21 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.2</version>
                 <configuration>
-                    <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <VGS-LittleProxy-Revision>${buildNumber}</VGS-LittleProxy-Revision>
+                        </manifestEntries>
+                    </archive>
                 </configuration>
             </plugin>
 
