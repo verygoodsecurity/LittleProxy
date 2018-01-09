@@ -498,9 +498,25 @@
                 </plugin>
 
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>buildnumber-maven-plugin</artifactId>
+                    <version>1.4</version>
+                </plugin>
+
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>3.0.2</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            </manifest>
+                            <manifestEntries>
+                                <VGS-LittleProxy-Revision>${buildNumber}</VGS-LittleProxy-Revision>
+                            </manifestEntries>
+                        </archive>
+                    </configuration>
                 </plugin>
 
                 <plugin>
@@ -550,6 +566,22 @@
                     </links>
                     <!-- disable doclint, since Java 8 treats warnings as errors -->
                     <additionalparam>${javadoc.opts}</additionalparam>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
                 </configuration>
             </plugin>
 
