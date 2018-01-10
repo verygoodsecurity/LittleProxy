@@ -17,6 +17,8 @@ import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.littleshoot.proxy.ActivityTracker;
+import org.littleshoot.proxy.GlobalStateHandler;
+import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
 import org.littleshoot.proxy.ChainedProxyManager;
 import org.littleshoot.proxy.DefaultHostResolver;
 import org.littleshoot.proxy.DnsSecServerResolver;
@@ -26,8 +28,12 @@ import org.littleshoot.proxy.HttpFiltersSource;
 import org.littleshoot.proxy.HttpFiltersSourceAdapter;
 import org.littleshoot.proxy.HttpProxyServer;
 import org.littleshoot.proxy.HttpProxyServerBootstrap;
+import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.MitmManager;
+import org.littleshoot.proxy.MitmManagerFactory;
 import org.littleshoot.proxy.ProxyAuthenticator;
+import org.littleshoot.proxy.ExceptionHandler;
+import org.littleshoot.proxy.RequestTracer;
 import org.littleshoot.proxy.SslEngineSource;
 import org.littleshoot.proxy.TransportProtocol;
 import org.littleshoot.proxy.UnknownTransportProtocolException;
@@ -106,8 +112,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final boolean authenticateSslClients;
     private final ProxyAuthenticator proxyAuthenticator;
     private final ChainedProxyManager chainProxyManager;
-    private final MitmManager mitmManager;
+    private final MitmManagerFactory mitmManagerFactory;
+    private final ExceptionHandler clientToProxyExHandler;
+    private final ExceptionHandler proxyToServerExHandler;
+    private final RequestTracer requestTracer;
+    private final GlobalStateHandler globalStateHandler;
     private final HttpFiltersSource filtersSource;
+    private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
     private volatile int connectTimeout;
     private volatile int idleConnectionTimeout;
@@ -202,7 +213,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
      * @param chainProxyManager
      *            The proxy to send requests to if chaining proxies. Typically
      *            <code>null</code>.
-     * @param mitmManager
+     * @param mitmManagerFactory
      *            The {@link MitmManager} to use for man in the middle'ing
      *            CONNECT requests
      * @param filtersSource
@@ -238,8 +249,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             boolean authenticateSslClients,
             ProxyAuthenticator proxyAuthenticator,
             ChainedProxyManager chainProxyManager,
-            MitmManager mitmManager,
+            MitmManagerFactory mitmManagerFactory,
+            ExceptionHandler clientToProxyExHandler,
+            ExceptionHandler proxyToServerExHandler,
+            RequestTracer requestTracer,
+            GlobalStateHandler globalStateHandler,
             HttpFiltersSource filtersSource,
+            FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
             int idleConnectionTimeout,
             Collection<ActivityTracker> activityTrackers,
@@ -260,8 +276,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.authenticateSslClients = authenticateSslClients;
         this.proxyAuthenticator = proxyAuthenticator;
         this.chainProxyManager = chainProxyManager;
-        this.mitmManager = mitmManager;
+        this.mitmManagerFactory = mitmManagerFactory;
+        this.clientToProxyExHandler = clientToProxyExHandler;
+        this.proxyToServerExHandler = proxyToServerExHandler;
+        this.requestTracer = requestTracer;
+        this.globalStateHandler = globalStateHandler;
         this.filtersSource = filtersSource;
+        this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
         this.transparent = transparent;
         this.idleConnectionTimeout = idleConnectionTimeout;
         if (activityTrackers != null) {
@@ -394,8 +415,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     authenticateSslClients,
                     proxyAuthenticator,
                     chainProxyManager,
-                    mitmManager,
+                    mitmManagerFactory,
+                    clientToProxyExHandler,
+                    proxyToServerExHandler,
+                    requestTracer,
+                    globalStateHandler,
                     filtersSource,
+                    unrecoverableFailureHttpResponseComposer,
                     transparent,
                     idleConnectionTimeout,
                     activityTrackers,
@@ -565,8 +591,27 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return chainProxyManager;
     }
 
-    protected MitmManager getMitmManager() {
-        return mitmManager;
+    protected MitmManager getMitmManager(Channel channel) {
+        if (mitmManagerFactory != null) {
+            return mitmManagerFactory.getInstance(channel);
+        }
+        return null;
+    }
+
+    protected ExceptionHandler getClientToProxyExHandler() {
+        return clientToProxyExHandler;
+    }
+
+    protected ExceptionHandler getProxyToServerExHandler() {
+        return proxyToServerExHandler;
+    }
+
+    protected GlobalStateHandler getGlobalStateHandler() {
+        return globalStateHandler;
+    }
+
+    protected RequestTracer getRequestTracer() {
+        return requestTracer;
     }
 
     protected SslEngineSource getSslEngineSource() {
@@ -579,6 +624,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
     public HttpFiltersSource getFiltersSource() {
         return filtersSource;
+    }
+
+    public FailureHttpResponseComposer getUnrecoverableFailureHttpResponseComposer() {
+        return unrecoverableFailureHttpResponseComposer;
     }
 
     protected Collection<ActivityTracker> getActivityTrackers() {
@@ -606,8 +655,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private boolean authenticateSslClients = true;
         private ProxyAuthenticator proxyAuthenticator = null;
         private ChainedProxyManager chainProxyManager = null;
-        private MitmManager mitmManager = null;
+        private MitmManagerFactory mitmManagerFactory = null;
+        private ExceptionHandler clientToProxyExHandler = null;
+        private ExceptionHandler proxyToServerExHandler = null;
+        private RequestTracer requestTracer = null;
+        private GlobalStateHandler globalStateHandler = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
+        private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
         private boolean transparent = false;
         private int idleConnectionTimeout = 70;
         private Collection<ActivityTracker> activityTrackers = new ConcurrentLinkedQueue<ActivityTracker>();
@@ -636,8 +690,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 boolean authenticateSslClients,
                 ProxyAuthenticator proxyAuthenticator,
                 ChainedProxyManager chainProxyManager,
-                MitmManager mitmManager,
+                MitmManagerFactory mitmManagerFactory,
+                ExceptionHandler clientToProxyExHandler,
+                ExceptionHandler proxyToServerExHandler,
+                RequestTracer requestTracer,
+                GlobalStateHandler globalStateHandler,
                 HttpFiltersSource filtersSource,
+                FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
                 Collection<ActivityTracker> activityTrackers,
                 int connectTimeout, HostResolver serverResolver,
@@ -657,8 +716,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.authenticateSslClients = authenticateSslClients;
             this.proxyAuthenticator = proxyAuthenticator;
             this.chainProxyManager = chainProxyManager;
-            this.mitmManager = mitmManager;
+            this.mitmManagerFactory = mitmManagerFactory;
+            this.clientToProxyExHandler = clientToProxyExHandler;
+            this.proxyToServerExHandler = proxyToServerExHandler;
+            this.requestTracer = requestTracer;
+            this.globalStateHandler = globalStateHandler;
             this.filtersSource = filtersSource;
+            this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             this.transparent = transparent;
             this.idleConnectionTimeout = idleConnectionTimeout;
             if (activityTrackers != null) {
@@ -749,10 +813,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         public HttpProxyServerBootstrap withSslEngineSource(
                 SslEngineSource sslEngineSource) {
             this.sslEngineSource = sslEngineSource;
-            if (this.mitmManager != null) {
+            if (this.mitmManagerFactory != null) {
                 LOG.warn("Enabled encrypted inbound connections with man in the middle. "
                         + "These are mutually exclusive - man in the middle will be disabled.");
-                this.mitmManager = null;
+                this.mitmManagerFactory = null;
             }
             return this;
         }
@@ -780,8 +844,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         @Override
         public HttpProxyServerBootstrap withManInTheMiddle(
-                MitmManager mitmManager) {
-            this.mitmManager = mitmManager;
+                MitmManagerFactory mitmManagerFactory) {
+            this.mitmManagerFactory = mitmManagerFactory;
             if (this.sslEngineSource != null) {
                 LOG.warn("Enabled man in the middle with encrypted inbound connections. "
                         + "These are mutually exclusive - encrypted inbound connections will be disabled.");
@@ -791,9 +855,43 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
+        public HttpProxyServerBootstrap withProxyToServerExHandler(
+            ExceptionHandler proxyToServerExHandler) {
+            this.proxyToServerExHandler = proxyToServerExHandler;
+            return this;
+        }
+
+        @Override
+        public HttpProxyServerBootstrap withClientToProxyExHandler(
+            ExceptionHandler clientToProxyExHandler) {
+            this.clientToProxyExHandler = clientToProxyExHandler;
+            return this;
+        }
+
+        @Override
+        public HttpProxyServerBootstrap withRequestTracer(
+            RequestTracer requestTracer) {
+            this.requestTracer = requestTracer;
+            return this;
+        }
+
+        @Override
+        public HttpProxyServerBootstrap withCustomGlobalState(
+            GlobalStateHandler globalStateHandler) {
+            this.globalStateHandler = globalStateHandler;
+            return this;
+        }
+
+        @Override
         public HttpProxyServerBootstrap withFiltersSource(
                 HttpFiltersSource filtersSource) {
             this.filtersSource = filtersSource;
+            return this;
+        }
+
+        public HttpProxyServerBootstrap withUnrecoverableFailureHttpResponseComposer(
+            FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer) {
+            this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             return this;
         }
 
@@ -899,8 +997,9 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             return new DefaultHttpProxyServer(serverGroup,
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
-                    proxyAuthenticator, chainProxyManager, mitmManager,
-                    filtersSource, transparent,
+                    proxyAuthenticator, chainProxyManager, mitmManagerFactory,
+                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler,
+                    filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
                     localAddress, proxyAlias, maxInitialLineLength, maxHeaderSize, maxChunkSize,

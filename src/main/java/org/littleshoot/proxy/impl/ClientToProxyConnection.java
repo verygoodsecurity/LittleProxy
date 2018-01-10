@@ -25,6 +25,9 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.ActivityTracker;
+import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
+import org.littleshoot.proxy.ExceptionHandler;
+import org.littleshoot.proxy.FailureHttpResponseComposer;
 import org.littleshoot.proxy.FlowContext;
 import org.littleshoot.proxy.FullFlowContext;
 import org.littleshoot.proxy.HttpFilters;
@@ -443,7 +446,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             // if this HttpResponse does not have any means of signaling the end of the message body other than closing
             // the connection, convert the message to a "Transfer-Encoding: chunked" HTTP response. This avoids the need
             // to close the client connection to indicate the end of the message. (Responses to HEAD requests "must be" empty.)
-            if (!ProxyUtils.isHEAD(currentHttpRequest) && !ProxyUtils.isResponseSelfTerminating(httpResponse)) {
+            if (currentHttpRequest != null && !ProxyUtils.isHEAD(currentHttpRequest) && !ProxyUtils.isResponseSelfTerminating(httpResponse)) {
                 // if this is not a FullHttpResponse,  duplicate the HttpResponse from the server before sending it to
                 // the client. this allows us to set the Transfer-Encoding to chunked without interfering with netty's
                 // handling of the response from the server. if we modify the original HttpResponse from the server,
@@ -616,22 +619,25 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                         serverConnection.getRemoteAddress(),
                         lastStateBeforeFailure,
                         cause);
-                connectionFailedUnrecoverably(initialRequest, serverConnection);
+                connectionFailedUnrecoverably(initialRequest, serverConnection, cause);
                 return false;
             }
         } catch (UnknownHostException uhe) {
-            connectionFailedUnrecoverably(initialRequest, serverConnection);
+            connectionFailedUnrecoverably(initialRequest, serverConnection, cause);
             return false;
         }
     }
 
-    private void connectionFailedUnrecoverably(HttpRequest initialRequest, ProxyToServerConnection serverConnection) {
+    private void connectionFailedUnrecoverably(HttpRequest initialRequest, ProxyToServerConnection serverConnection, Throwable cause) {
         // the connection to the server failed, so disconnect the server and remove the ProxyToServerConnection from the
         // map of open server connections
         serverConnection.disconnect();
         this.serverConnectionsByHostAndPort.remove(serverConnection.getServerHostAndPort());
 
-        boolean keepAlive = writeBadGateway(initialRequest);
+        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = proxyServer.getUnrecoverableFailureHttpResponseComposer();
+        FullHttpResponse failureResponse = unrecoverableFailureHttpResponseComposer.compose(initialRequest, cause);
+
+        boolean keepAlive = respondWithShortCircuitResponse(failureResponse);
         if (keepAlive) {
             become(AWAITING_INITIAL);
         } else {
@@ -750,7 +756,13 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 LOG.info("An executor rejected a read or write operation on the ClientToProxyConnection (this is normal if the proxy is shutting down). Message: " + cause.getMessage());
                 LOG.debug("A RejectedExecutionException occurred on ClientToProxyConnection", cause);
             } else {
-                LOG.error("Caught an exception on ClientToProxyConnection", cause);
+                ExceptionHandler exHandler = proxyServer.getClientToProxyExHandler();
+                if (exHandler != null) {
+                    LOG.debug("Custom exception handler '" + exHandler.toString() + "' invoked", cause);
+                    exHandler.handle(cause);
+                } else {
+                    LOG.error("Caught an exception on ClientToProxyConnection", cause);
+                }
             }
         } finally {
             // always disconnect the client when an exception occurs on the channel
@@ -779,6 +791,14 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
+        if (proxyServer.getRequestTracer() != null) {
+            pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
+        }
+
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
+        }
+
         pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
 
@@ -805,7 +825,12 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
+        }
+
         pipeline.addLast("handler", this);
+
     }
 
     /**
@@ -866,7 +891,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             }
         }
 
-        if (!HttpHeaders.isKeepAlive(req)) {
+        if (req != null && !HttpHeaders.isKeepAlive(req)) {
             LOG.debug("Closing client connection since request is not keep alive: {}", req);
             // Here we simply want to close the connection because the
             // client itself has requested it be closed in the request.
@@ -1203,15 +1228,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @return true if the connection will be kept open, or false if it will be disconnected
      */
     private boolean writeBadGateway(HttpRequest httpRequest) {
-        String body = "Bad Gateway: " + httpRequest.getUri();
-        FullHttpResponse response = ProxyUtils.createFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY, body);
-
-        if (ProxyUtils.isHEAD(httpRequest)) {
-            // don't allow any body content in response to a HEAD request
-            response.content().clear();
-        }
-
-        return respondWithShortCircuitResponse(response);
+        FullHttpResponse badGatewayResponse = new DefaultFailureHttpResponseComposer().compose(httpRequest, null);
+        return respondWithShortCircuitResponse(badGatewayResponse);
     }
 
     /**

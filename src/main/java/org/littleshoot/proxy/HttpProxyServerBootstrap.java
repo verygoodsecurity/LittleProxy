@@ -102,7 +102,7 @@ public interface HttpProxyServerBootstrap {
      * </p>
      * 
      * <p>
-     * Note - This and {@link #withManInTheMiddle(MitmManager)} are
+     * Note - This and {@link #withManInTheMiddle(MitmManagerFactory)} are
      * mutually exclusive.
      * </p>
      * 
@@ -179,7 +179,67 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withManInTheMiddle(
-            MitmManager mitmManager);
+            MitmManagerFactory mitmManager);
+
+    /**
+     * <p>
+     * Specify an {@link ExceptionHandler} to handle client to proxy errors
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param clientToProxyExHandler
+     * @return exception handler
+     */
+    HttpProxyServerBootstrap withClientToProxyExHandler(
+        ExceptionHandler clientToProxyExHandler);
+
+    /**
+     * <p>
+     * Specify an {@link ExceptionHandler} to handle proxy to server errors
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param proxyToServerExHandler
+     * @return exception handler
+     */
+    HttpProxyServerBootstrap withProxyToServerExHandler(
+        ExceptionHandler proxyToServerExHandler);
+
+
+    /**
+     * <p>
+     * Specify a {@link RequestTracer} to trace proxy requests
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param requestTracer
+     * @return proxy server bootstrap
+     */
+    HttpProxyServerBootstrap withRequestTracer(RequestTracer requestTracer);
+
+    /**
+     * <p>
+     * Specify an {@link GlobalStateHandler} to customize a global state based on channel attributes
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param globalStateHandler
+     * @return proxy server bootstrap
+     */
+    HttpProxyServerBootstrap withCustomGlobalState(
+        GlobalStateHandler globalStateHandler);
 
     /**
      * <p>
@@ -196,6 +256,22 @@ public interface HttpProxyServerBootstrap {
      */
     HttpProxyServerBootstrap withFiltersSource(
             HttpFiltersSource filtersSource);
+
+    /**
+     * <p>
+     * Specify a {@link FailureHttpResponseComposer} to use for composing
+     * custom response message on unrecoverable failure
+     * </p>
+     *
+     * <p>
+     * Default = {@link DefaultFailureHttpResponseComposer}
+     * </p>
+     *
+     * @param unrecoverableFailureHttpResponseComposer custom response message composer
+     * @return
+     */
+    HttpProxyServerBootstrap withUnrecoverableFailureHttpResponseComposer(
+        FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer);
 
     /**
      * <p>

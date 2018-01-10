@@ -5,11 +5,10 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import org.littleshoot.proxy.extras.SelfSignedMitmManager;
+import org.littleshoot.proxy.extras.SelfSignedMitmManagerFactory;
 
 import java.nio.charset.Charset;
 import java.util.HashSet;
-import java.util.Queue;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.hasItem;
@@ -31,7 +30,7 @@ public class MitmProxyTest extends BaseProxyTest {
     protected void setUp() {
         this.proxyServer = bootstrapProxy()
                 .withPort(0)
-                .withManInTheMiddle(new SelfSignedMitmManager())
+                .withManInTheMiddle(new SelfSignedMitmManagerFactory())
                 .withFiltersSource(new HttpFiltersSourceAdapter() {
                     @Override
                     public HttpFilters filterRequest(HttpRequest originalRequest) {

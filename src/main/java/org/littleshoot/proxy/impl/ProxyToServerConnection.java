@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -39,9 +40,11 @@ import org.littleshoot.proxy.ChainedProxyManager;
 import org.littleshoot.proxy.FullFlowContext;
 import org.littleshoot.proxy.HttpFilters;
 import org.littleshoot.proxy.MitmManager;
+import org.littleshoot.proxy.ExceptionHandler;
 import org.littleshoot.proxy.TransportProtocol;
 import org.littleshoot.proxy.UnknownTransportProtocolException;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
@@ -137,7 +140,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * Minimum size of the adaptive recv buffer when throttling is enabled. 
      */
     private static final int MINIMUM_RECV_BUFFER_SIZE_BYTES = 64;
-    
+
+    public static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_ATTR_KEY = AttributeKey.valueOf("remoteAddressAttrKey");
+
     /**
      * Create a new ProxyToServerConnection.
      * 
@@ -439,7 +444,13 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 LOG.info("An executor rejected a read or write operation on the ProxyToServerConnection (this is normal if the proxy is shutting down). Message: " + cause.getMessage());
                 LOG.debug("A RejectedExecutionException occurred on ProxyToServerConnection", cause);
             } else {
-                LOG.error("Caught an exception on ProxyToServerConnection", cause);
+                ExceptionHandler exHandler = proxyServer.getProxyToServerExHandler();
+                if (exHandler != null) {
+                    LOG.debug("Custom exception handler '" + exHandler.toString() + "' invoked", cause);
+                    exHandler.handle(cause);
+                } else {
+                    LOG.error("Caught an exception on ProxyToServerConnection", cause);
+                }
             }
         } finally {
             if (!is(DISCONNECTED)) {
@@ -528,6 +539,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void connectAndWrite(HttpRequest initialRequest) {
         LOG.debug("Starting new connection to: {}", remoteAddress);
 
+        this.clientConnection.channel.attr(REMOTE_ADDRESS_ATTR_KEY).set(remoteAddress);
+
         // Remember our initial request so that we can write it after connecting
         this.initialRequest = initialRequest;
         initializeConnectionFlow();
@@ -545,8 +558,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 .then(ConnectChannel);
 
         if (chainedProxy != null && chainedProxy.requiresEncryption()) {
-            connectionFlow.then(serverConnection.EncryptChannel(chainedProxy
-                    .newSslEngine()));
+            InetSocketAddress proxyAddress = chainedProxy.getChainedProxyAddress();
+
+            SSLEngine engine = proxyAddress == null || proxyAddress.isUnresolved() ? chainedProxy.newSslEngine() :
+                    chainedProxy.newSslEngine(proxyAddress.getHostName(), proxyAddress.getPort());
+            connectionFlow.then(serverConnection.EncryptChannel(engine));
         }
 
         if (ProxyUtils.isCONNECT(initialRequest)) {
@@ -554,9 +570,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             if (hasUpstreamChainedProxy()) {
                 connectionFlow.then(
                         serverConnection.HTTPCONNECTWithChainedProxy);
-            }        	
+            }
         	
-            MitmManager mitmManager = proxyServer.getMitmManager();
+            MitmManager mitmManager = proxyServer.getMitmManager(clientConnection.channel);
             boolean isMitmEnabled = mitmManager != null;
 
             if (isMitmEnabled) {
@@ -568,11 +584,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 // SNI may be disabled for this request due to a previous failed attempt to connect to the server
                 // with SNI enabled.
                 if (disableSni) {
-                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager()
+                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager(clientConnection.channel)
                             .serverSslEngine()));
                 } else {
-                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager()
-                            .serverSslEngine(parsedHostAndPort.getHostText(), parsedHostAndPort.getPort())));
+                    connectionFlow.then(serverConnection.EncryptChannel(proxyServer.getMitmManager(clientConnection.channel)
+                            .serverSslEngine(parsedHostAndPort.getHost(), parsedHostAndPort.getPort())));
                 }
 
             	connectionFlow
@@ -643,7 +659,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         protected Future<?> execute() {
             LOG.debug("Handling CONNECT request through Chained Proxy");
             chainedProxy.filterRequest(initialRequest);
-            MitmManager mitmManager = proxyServer.getMitmManager();
+            MitmManager mitmManager = proxyServer.getMitmManager(clientConnection.channel);
             boolean isMitmEnabled = mitmManager != null;
             /*
              * We ignore the LastHttpContent which we read from the client
@@ -720,7 +736,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         @Override
         protected Future<?> execute() {
             return clientConnection
-                    .encrypt(proxyServer.getMitmManager()
+                    .encrypt(proxyServer.getMitmManager(clientConnection.channel)
                             .clientSslEngineFor(initialRequest, sslEngine.getSession()), false)
                     .addListener(
                             new GenericFutureListener<Future<? super Channel>>() {
@@ -869,6 +885,10 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void initChannelPipeline(ChannelPipeline pipeline,
             HttpRequest httpRequest) {
 
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(clientConnection));
+        }
+
         if (trafficHandler != null) {
             pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
@@ -897,6 +917,10 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
+
+        if (proxyServer.getGlobalStateHandler() != null) {
+            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(clientConnection));
+        }
 
         pipeline.addLast("handler", this);
     }
@@ -958,7 +982,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             throw new UnknownHostException(hostAndPort);
         }
 
-        String host = parsedHostAndPort.getHostText();
+        String host = parsedHostAndPort.getHost();
         int port = parsedHostAndPort.getPortOrDefault(80);
 
         return proxyServer.getServerResolver().resolve(host, port);

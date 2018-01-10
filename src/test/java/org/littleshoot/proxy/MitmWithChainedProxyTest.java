@@ -8,13 +8,12 @@ import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.littleshoot.proxy.extras.SelfSignedMitmManager;
-
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import org.littleshoot.proxy.extras.SelfSignedMitmManagerFactory;
 
 /**
  * Tests a proxy that runs as a MITM and which is chained with
@@ -40,7 +39,7 @@ public class MitmWithChainedProxyTest extends BaseChainedProxyTest {
                 .withPort(0)
                 .withChainProxyManager(chainedProxyManager())
                 .plusActivityTracker(DOWNSTREAM_TRACKER)
-                .withManInTheMiddle(new SelfSignedMitmManager())
+                .withManInTheMiddle(new SelfSignedMitmManagerFactory())
                 .withFiltersSource(new HttpFiltersSourceAdapter() {
                     @Override
                     public HttpFilters filterRequest(HttpRequest originalRequest) {
