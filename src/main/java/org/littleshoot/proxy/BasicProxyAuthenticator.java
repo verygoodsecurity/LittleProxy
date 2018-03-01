@@ -1,43 +1,47 @@
 package org.littleshoot.proxy;
 
 import com.google.common.io.BaseEncoding;
-import io.netty.handler.codec.http.HttpRequest;
+
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
+import java.util.List;
+
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
 
 /**
- * Basic proxy authenticator that can authenticate someone for using our Proxy on
- * the basis of of a username and password
+ * Basic Auth user/password authenticator
  */
-public abstract class BasicProxyAuthenticator implements ProxyAuthenticator {
+public abstract class BasicProxyAuthenticator extends AbstractProxyAuthenticator {
 
-    @Override
-    public boolean authenticate(String proxyAuthorizationHeaderValue, HttpRequest httpRequest) {
-        String value = StringUtils.substringAfter(proxyAuthorizationHeaderValue, "Basic ").trim();
+  private static final Logger LOG = LoggerFactory.getLogger(BasicProxyAuthenticator.class);
 
-        byte[] decodedValue = BaseEncoding.base64().decode(value);
-
-        String decodedString = new String(decodedValue, Charset.forName("UTF-8"));
-
-        String userName = StringUtils.substringBefore(decodedString, ":");
-        String password = StringUtils.substringAfter(decodedString, ":");
-
-        return authenticate(userName, password, httpRequest);
+  @Override
+  public boolean authenticate(HttpRequest request) {
+    if (!request.headers().contains(HttpHeaders.Names.PROXY_AUTHORIZATION)) {
+      return false;
     }
 
-    /**
-     * Authenticates the user using the specified userName and password.
-     *
-     * @param username
-     *            The user name.
-     * @param password
-     *            The password.
-     * @return <code>true</code> if the credentials are acceptable, otherwise
-     *         <code>false</code>.
-     * requests.
-     */
-    public abstract boolean authenticate(String username, String password, HttpRequest httpRequest);
+    List<String> values = request.headers().getAll(HttpHeaders.Names.PROXY_AUTHORIZATION);
+    String fullValue = values.iterator().next();
+    String value = StringUtils.substringAfter(fullValue, "Basic ").trim();
 
-    abstract public String getRealm();
+    if (StringUtils.isNotEmpty(value)) {
+      byte[] decodedValue = BaseEncoding.base64().decode(value);
+      String decodedString = new String(decodedValue, Charset.forName("UTF-8"));
+
+      String userName = StringUtils.substringBefore(decodedString, ":");
+      String password = StringUtils.substringAfter(decodedString, ":");
+
+      return authenticate(userName, password, request);
+    }
+
+    LOG.debug("Invalid authentication scheme. Expected 'Basic'");
+    return false;
+  }
+
+  public abstract boolean authenticate(String username, String password, HttpRequest request);
 }

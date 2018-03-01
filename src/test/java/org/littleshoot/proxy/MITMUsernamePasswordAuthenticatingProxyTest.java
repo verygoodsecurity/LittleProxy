@@ -7,13 +7,12 @@ import org.littleshoot.proxy.extras.SelfSignedMitmManagerFactory;
  * uses MITM.
  */
 public class MITMUsernamePasswordAuthenticatingProxyTest extends
-        UsernamePasswordAuthenticatingProxyTest
-        implements ProxyAuthenticator {
+        UsernamePasswordAuthenticatingProxyTest {
     @Override
     protected void setUp() {
         this.proxyServer = bootstrapProxy()
                 .withPort(0)
-                .withProxyAuthenticator(this)
+                .withProxyAuthenticator(new TestBasicProxyAuthenticator())
                 .withManInTheMiddle(new SelfSignedMitmManagerFactory())
                 .start();
     }

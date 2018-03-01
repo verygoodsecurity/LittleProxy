@@ -5,30 +5,26 @@ import io.netty.handler.codec.http.HttpRequest;
 /**
  * Tests a single proxy that requires username/password authentication.
  */
-public class UsernamePasswordAuthenticatingProxyTest extends BaseProxyTest
-        implements ProxyAuthenticator {
+public class UsernamePasswordAuthenticatingProxyTest extends BaseProxyTest {
+    private static String USERNAME = "user1";
+    private static String PASSWORD = "password";
+
     @Override
     protected void setUp() {
         this.proxyServer = bootstrapProxy()
                 .withPort(0)
-                .withProxyAuthenticator(this)
+                .withProxyAuthenticator(new TestBasicProxyAuthenticator())
                 .start();
     }
 
     @Override
     protected String getUsername() {
-        return "user1";
+        return USERNAME;
     }
 
     @Override
     protected String getPassword() {
-        return "user2";
-    }
-
-    @Override
-    public boolean authenticate(String proxyAuthorizationHeaderValue, HttpRequest httpRequest) {
-        return new TestBasicProxyAuthenticator(getUsername(), getPassword())
-            .authenticate(proxyAuthorizationHeaderValue, httpRequest);
+        return PASSWORD;
     }
 
     @Override
@@ -36,29 +32,16 @@ public class UsernamePasswordAuthenticatingProxyTest extends BaseProxyTest
         return true;
     }
 
-    @Override
-    public String getRealm() {
-        return null;
-    }
-
-    static class TestBasicProxyAuthenticator extends BasicProxyAuthenticator{
-
-        private final String username;
-        private final String password;
-
-        TestBasicProxyAuthenticator(String username, String password) {
-            this.username = username;
-            this.password = password;
-        }
-
-        @Override
-        public boolean authenticate(String username, String password, HttpRequest httpRequest) {
-            return this.username.equals(username) && this.password.equals(password);
-        }
+    static class TestBasicProxyAuthenticator extends BasicProxyAuthenticator {
 
         @Override
         public String getRealm() {
-            return null;
+          return null;
+        }
+
+        @Override
+        public boolean authenticate(String username, String password, HttpRequest request) {
+          return USERNAME.equals(username) && PASSWORD.equals(password);
         }
     }
 }

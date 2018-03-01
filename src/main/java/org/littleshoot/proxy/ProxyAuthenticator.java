@@ -1,5 +1,6 @@
 package org.littleshoot.proxy;
 
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 
 /**
@@ -11,16 +12,13 @@ public interface ProxyAuthenticator {
     /**
      * Authenticates the user using the specified proxy authorization header.
      *
-     * @param proxyAuthorizationHeaderValue
-     *            The proxy authorization header value.
-     *
      * @param httpRequest
      *            http request
      *
      * @return <code>true</code> if the credential is acceptable, otherwise
      *         <code>false</code>.
      */
-    boolean authenticate(String proxyAuthorizationHeaderValue, HttpRequest httpRequest);
+    boolean authenticate(HttpRequest httpRequest);
 
     /**
      * The realm value to be used in the request for proxy authentication 
@@ -30,4 +28,9 @@ public interface ProxyAuthenticator {
      * @return
      */
     String getRealm();
+
+    /**
+     * Response that is going to be returned on authentication failure
+     */
+    FullHttpResponse authenticationFailureResponse(HttpRequest request);
 }
