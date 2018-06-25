@@ -64,7 +64,7 @@ jobs:
       - run:
           name: Run test
           command: |
-            ./scripts/run_circle_tests.sh
+            unset AWS_ACCESS_KEY_ID; unset AWS_SECRET_ACCESS_KEY; ./scripts/run_circle_tests.sh
   deployment:
     <<: *job-defaults
     machine:
