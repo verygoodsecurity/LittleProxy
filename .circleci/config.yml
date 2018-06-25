@@ -49,7 +49,7 @@ jobs:
       - run:
           name: Maven Clean Package
           command: |
-            mvn clean dependency:go-offline install -Dmaven.test.skip=true --threads 5 -B
+            unset AWS_ACCESS_KEY_ID; unset AWS_SECRET_ACCESS_KEY; mvn clean dependency:go-offline install -Dmaven.test.skip=true --threads 5 -B
       - <<: *save-maven-cache
       - <<: *persist-workspace
   test:
@@ -77,7 +77,7 @@ jobs:
       - run:
           name: Deploy
           command: |
-            mvn deploy -DskipTests=true
+            unset AWS_ACCESS_KEY_ID; unset AWS_SECRET_ACCESS_KEY; mvn deploy -DskipTests=true
   release:
     <<: *job-defaults
     machine:
@@ -90,6 +90,8 @@ jobs:
       - run:
           name: Release
           command: |
+            unset AWS_ACCESS_KEY_ID
+            unset AWS_SECRET_ACCESS_KEY
             git config user.name "circleci"
             git config user.email "circleci@vgs.com"
             git fetch
