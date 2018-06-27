@@ -38,9 +38,6 @@ public class CustomProxyToServerExHandlerTest extends MitmWithBadServerAuthentic
   @Test
   public void testCustomProxyToServerExHandler() throws Exception {
     super.testSimpleGetRequestOverHTTPS();
-    System.out.println("==========================================================");
-    customExHandlerEntered.forEach(custom -> System.out.println("%^& "+custom.toString()));
-    System.out.println("==========================================================");
     Assert.assertFalse("Custom ex handler was not called", customExHandlerEntered.isEmpty());
     Assert.assertEquals("Incorrect exception was passed to custom ex handles",
         customExHandlerEntered.get(0).getMessage(), "javax.net.ssl.SSLHandshakeException: General SSLEngine problem");
