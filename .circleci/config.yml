@@ -16,13 +16,13 @@ setup-env: &setup-env
 # Template to save Maven dependency cache to restore it in another jobs
 save-maven-cache: &save-maven-cache
   save_cache:
-    key: pdf-redactor-{{ checksum "pom.xml" }}
+    key: LittleProxy-{{ checksum "pom.xml" }}
     paths:
       - ~/.m2
 
 restore-maven-cache: &restore-maven-cache
   restore_cache:
-    key: pdf-redactor-{{ checksum "pom.xml" }}
+    key: LittleProxy-{{ checksum "pom.xml" }}
 
 # Persists workspace so it can be attached in another jobs as soon as it was checked out and built
 persist-workspace: &persist-workspace
