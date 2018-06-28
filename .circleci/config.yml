@@ -34,7 +34,6 @@ attach-workspace: &attach-workspace
   attach_workspace:
     at: *working_directory
 
-
 # === JOBS ===
 version: 2
 jobs:
@@ -57,8 +56,9 @@ jobs:
     machine:
       enabled: true
     steps:
-      - <<: *attach-workspace
+      - checkout
       - <<: *setup-env
+      - <<: *attach-workspace
       - <<: *restore-maven-cache
       - run:
           name: Run test
@@ -69,8 +69,9 @@ jobs:
     machine:
       enabled: true
     steps:
-      - <<: *attach-workspace
+      - checkout
       - <<: *setup-env
+      - <<: *attach-workspace
       - <<: *restore-maven-cache
       - run:
           name: Deploy
@@ -81,8 +82,9 @@ jobs:
     machine:
       enabled: true
     steps:
-      - <<: *attach-workspace
+      - checkout
       - <<: *setup-env
+      - <<: *attach-workspace
       - <<: *restore-maven-cache
       - run:
           name: Release
