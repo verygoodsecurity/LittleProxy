@@ -56,10 +56,9 @@ jobs:
     machine:
       enabled: true
     steps:
-      - checkout
-      - <<: *setup-env
       - <<: *attach-workspace
       - <<: *restore-maven-cache
+      - <<: *setup-env
       - run:
           name: Run test
           command: |
