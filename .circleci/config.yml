@@ -101,6 +101,8 @@ jobs:
             mvn -B -X -e gitflow:release-start -DreleaseVersion=$CIRCLE_TAG
             mvn -B -X -e gitflow:release-finish -DreleaseVersion=$CIRCLE_TAG -DpostReleaseGoals='deploy -DskipTests'
             git push origin $RELEASE_BRANCH
+
+# === WORKFLOW ===
 workflows:
   version: 2
   build_test_and_deploy:
