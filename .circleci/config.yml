@@ -56,8 +56,6 @@ jobs:
     machine:
       enabled: true
     steps:
-      - checkout
-      - <<: *setup-env
       - <<: *attach-workspace
       - <<: *restore-maven-cache
       - run:
@@ -69,8 +67,6 @@ jobs:
     machine:
       enabled: true
     steps:
-      - checkout
-      - <<: *setup-env
       - <<: *attach-workspace
       - <<: *restore-maven-cache
       - run:
@@ -82,8 +78,6 @@ jobs:
     machine:
       enabled: true
     steps:
-      - checkout
-      - <<: *setup-env
       - <<: *attach-workspace
       - <<: *restore-maven-cache
       - run:
