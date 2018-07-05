@@ -202,7 +202,7 @@ class ConnectionFlow {
     }
 
     /**
-     * Like {@link #fail(Throwable)} but with no cause.
+     * Like {@link #fail(Throwable)} but with no cause. Test (do not merge me!)
      */
     void fail() {
         fail(null);
