@@ -118,7 +118,7 @@ workflows:
             - test
           filters:
             branches:
-              only: vgs-edition
+              only: /.*/
       - release:
           requires:
             - test
