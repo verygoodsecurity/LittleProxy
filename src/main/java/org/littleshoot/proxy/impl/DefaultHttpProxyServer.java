@@ -612,7 +612,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return clientToProxyExHandler;
     }
 
-    protected ExceptionHandler getProxyToServerExHandler() {
+    public ExceptionHandler getProxyToServerExHandler() {
         return proxyToServerExHandler;
     }
 
