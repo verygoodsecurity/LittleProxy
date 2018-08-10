@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
@@ -138,11 +139,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
 
-    /**
-     * The current HTTP request that this connection is currently servicing.
-     */
-    private volatile HttpRequest currentRequest;
-
     ClientToProxyConnection(
             final DefaultHttpProxyServer proxyServer,
             SslEngineSource sslEngineSource,
@@ -229,11 +225,18 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      */
     private ConnectionState doReadHTTPInitial(HttpRequest httpRequest) {
         // Make a copy of the original request
-        this.currentRequest = copy(httpRequest);
+        final HttpRequest currentRequest = copy(httpRequest);
 
         // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
         // should not be filtered), fall back to the default no-op filter source.
-        HttpFilters filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+        HttpFilters filterInstance;
+        try {
+            filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+        } finally {
+            if (currentRequest instanceof ReferenceCounted) {
+                ((ReferenceCounted)currentRequest).release();
+            }
+        }
         if (filterInstance != null) {
             currentFilters = filterInstance;
         } else {
@@ -430,8 +433,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     void respond(ProxyToServerConnection serverConnection, HttpFilters filters,
             HttpRequest currentHttpRequest, HttpResponse currentHttpResponse,
             HttpObject httpObject) {
-        // we are sending a response to the client, so we are done handling this request
-        this.currentRequest = null;
 
         httpObject = filters.serverToProxyResponse(httpObject);
         if (httpObject == null) {
@@ -523,7 +524,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             // the idle timeout fired on the active server connection. send a timeout response to the client.
             LOG.warn("Server timed out: {}", currentServerConnection);
             currentFilters.serverToProxyResponseTimedOut();
-            writeGatewayTimeout(currentRequest);
+            writeGatewayTimeout(serverConnection.getInitialRequest());
         }
     }
 
@@ -1260,9 +1261,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @return true if the connection will be kept open, or false if it will be disconnected.
      */
     private boolean respondWithShortCircuitResponse(HttpResponse httpResponse) {
-        // we are sending a response to the client, so we are done handling this request
-        this.currentRequest = null;
-
         HttpResponse filteredResponse = (HttpResponse) currentFilters.proxyToClientResponse(httpResponse);
         if (filteredResponse == null) {
             disconnect();
