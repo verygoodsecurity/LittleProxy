@@ -320,11 +320,6 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     void write(Object msg) {
         LOG.debug("Requested write of {}", msg);
 
-        if (msg instanceof ReferenceCounted) {
-            LOG.debug("Retaining reference counted message");
-            ((ReferenceCounted) msg).retain();
-        }
-
         if (is(DISCONNECTED) && msg instanceof HttpRequest) {
             LOG.debug("Currently disconnected, connect and then write the message");
             connectAndWrite((HttpRequest) msg);
@@ -351,7 +346,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             }
 
             LOG.debug("Using existing connection to: {}", remoteAddress);
-            doWrite(msg);
+            super.write(msg);
         }
     };
 

@@ -222,10 +222,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
             ((ReferenceCounted) msg).retain();
         }
 
-        doWrite(msg);
-    }
-
-    void doWrite(Object msg) {
         LOG.debug("Writing: {}", msg);
 
         try {
