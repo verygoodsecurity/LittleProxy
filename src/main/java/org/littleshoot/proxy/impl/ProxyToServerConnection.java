@@ -537,7 +537,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         this.clientConnection.channel.attr(REMOTE_ADDRESS_ATTR_KEY).set(remoteAddress);
 
         // Remember our initial request so that we can write it after connecting
-        this.initialRequest = initialRequest;
+        this.initialRequest = copy(initialRequest);
         initializeConnectionFlow();
         connectionFlow.start();
     }
@@ -945,8 +945,13 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         if (shouldForwardInitialRequest) {
             LOG.debug("Writing initial request: {}", initialRequest);
-            write(initialRequest);
+            doWrite(initialRequest);
         } else {
+
+            if (initialRequest instanceof ReferenceCounted) {
+                ((ReferenceCounted)initialRequest).release();
+            }
+
             LOG.debug("Dropping initial request: {}", initialRequest);
         }
     }
