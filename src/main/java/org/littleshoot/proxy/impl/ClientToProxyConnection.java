@@ -4,6 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -1023,6 +1025,27 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         request.headers().remove(HttpHeaders.Names.PROXY_AUTHORIZATION);
         authenticated.set(true);
         return false;
+    }
+
+    /***************************************************************************
+     * Request/Response Rewriting
+     **************************************************************************/
+
+    /**
+     * Copy the given {@link HttpRequest} verbatim.
+     *
+     * @param original
+     * @return
+     */
+    private HttpRequest copy(HttpRequest original) {
+        if (original instanceof FullHttpRequest) {
+            return ((FullHttpRequest) original).copy();
+        } else {
+            HttpRequest request = new DefaultHttpRequest(original.getProtocolVersion(),
+                    original.getMethod(), original.getUri());
+            request.headers().set(original.headers());
+            return request;
+        }
     }
 
     /**

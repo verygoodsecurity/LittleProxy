@@ -322,6 +322,12 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         if (is(DISCONNECTED) && msg instanceof HttpRequest) {
             LOG.debug("Currently disconnected, connect and then write the message");
+
+            if (msg instanceof ReferenceCounted) {
+                LOG.debug("Retaining reference counted message");
+                ((ReferenceCounted) msg).retain();
+            }
+
             connectAndWrite((HttpRequest) msg);
         } else {
             if (isConnecting()) {
@@ -346,7 +352,13 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             }
 
             LOG.debug("Using existing connection to: {}", remoteAddress);
-            super.write(msg);
+
+            if (msg instanceof ReferenceCounted) {
+                LOG.debug("Retaining reference counted message");
+                ((ReferenceCounted) msg).retain();
+            }
+
+            doWrite(msg);
         }
     };
 
@@ -537,7 +549,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         this.clientConnection.channel.attr(REMOTE_ADDRESS_ATTR_KEY).set(remoteAddress);
 
         // Remember our initial request so that we can write it after connecting
-        this.initialRequest = copy(initialRequest);
+        this.initialRequest = initialRequest;
         initializeConnectionFlow();
         connectionFlow.start();
     }

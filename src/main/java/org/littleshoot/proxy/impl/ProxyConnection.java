@@ -239,28 +239,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
     }
 
-
-    /***************************************************************************
-     * Request/Response Rewriting
-     **************************************************************************/
-
-    /**
-     * Copy the given {@link HttpRequest} verbatim.
-     *
-     * @param original
-     * @return
-     */
-    protected HttpRequest copy(HttpRequest original) {
-        if (original instanceof FullHttpRequest) {
-            return ((FullHttpRequest) original).copy();
-        } else {
-            HttpRequest request = new DefaultHttpRequest(original.getProtocolVersion(),
-                    original.getMethod(), original.getUri());
-            request.headers().set(original.headers());
-            return request;
-        }
-    }
-
     /**
      * Writes HttpObjects to the connection asynchronously.
      * 
