@@ -1,6 +1,7 @@
 package org.littleshoot.proxy;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.littleshoot.proxy.extras.SelfSignedMitmManagerFactory;
 
@@ -35,6 +36,7 @@ public class CustomProxyToServerExHandlerTest extends MitmWithBadServerAuthentic
   }
 
   @Test
+  @Ignore // this test is flack, needs to be fixed
   public void testCustomProxyToServerExHandler() throws Exception {
     super.testSimpleGetRequestOverHTTPS();
     Assert.assertFalse("Custom ex handler was not called", customExHandlerEntered.isEmpty());
