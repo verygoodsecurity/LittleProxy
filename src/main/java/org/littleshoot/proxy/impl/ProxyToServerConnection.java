@@ -320,14 +320,13 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     void write(Object msg) {
         LOG.debug("Requested write of {}", msg);
 
+        if (msg instanceof ReferenceCounted) {
+            LOG.debug("Retaining reference counted message");
+            ((ReferenceCounted) msg).retain();
+        }
+
         if (is(DISCONNECTED) && msg instanceof HttpRequest) {
             LOG.debug("Currently disconnected, connect and then write the message");
-
-            if (msg instanceof ReferenceCounted) {
-                LOG.debug("Retaining reference counted message");
-                ((ReferenceCounted) msg).retain();
-            }
-
             connectAndWrite((HttpRequest) msg);
         } else {
             if (isConnecting()) {
@@ -348,16 +347,15 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             // already disconnected
             if (isConnecting() || getCurrentState().isDisconnectingOrDisconnected()) {
                 LOG.debug("Connection failed or timed out while waiting to write message to server. Message will be discarded: {}", msg);
+
+                if (initialRequest instanceof ReferenceCounted) {
+                    ((ReferenceCounted)initialRequest).release();
+                }
+
                 return;
             }
 
             LOG.debug("Using existing connection to: {}", remoteAddress);
-
-            if (msg instanceof ReferenceCounted) {
-                LOG.debug("Retaining reference counted message");
-                ((ReferenceCounted) msg).retain();
-            }
-
             doWrite(msg);
         }
     };
@@ -816,6 +814,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         }
 
         // no chained proxy fallback or other retry mechanism available
+        if (initialRequest instanceof ReferenceCounted) {
+            ((ReferenceCounted)initialRequest).release();
+        }
         return false;
     }
 
