@@ -789,7 +789,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             try {
                 proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
                 super.channelRead(ctx, msg);
@@ -797,7 +797,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 if (msg instanceof ReferenceCounted) {
                     ((ReferenceCounted)msg).release();
                 }
-                throw new RuntimeException("Failed to execute inbound global state handler", e);
+                throw e;
             } finally {
                 proxyServer.getGlobalStateHandler().clear();
             }
@@ -816,7 +816,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         @Override
         public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise) {
+                          Object msg, ChannelPromise promise) throws Exception {
             try {
                 proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
                 super.write(ctx, msg, promise);
@@ -824,7 +824,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 if (msg instanceof ReferenceCounted) {
                     ((ReferenceCounted)msg).release();
                 }
-                throw new RuntimeException("Failed to execute outbound global state handler", e);
+                throw e;
             }  finally {
                 proxyServer.getGlobalStateHandler().clear();
             }
