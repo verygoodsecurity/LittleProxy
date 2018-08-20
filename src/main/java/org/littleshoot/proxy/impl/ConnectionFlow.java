@@ -195,21 +195,26 @@ class ConnectionFlow {
                     public void operationComplete(Future future)
                             throws Exception {
                         synchronized (connectLock) {
+
+                            boolean fallbackToAnotherChainedProxy = false;
+
                             try {
-                                if (!clientConnection.serverConnectionFailed(
+                                fallbackToAnotherChainedProxy = clientConnection.serverConnectionFailed(
                                     serverConnection,
                                     lastStateBeforeFailure,
-                                    cause)) {
+                                    cause);
+                            } finally {
+                                if (!fallbackToAnotherChainedProxy) {
+                                    if (serverConnection.getInitialRequest() instanceof ReferenceCounted) {
+                                        ((ReferenceCounted)serverConnection.getInitialRequest()).release();
+                                    }
+
                                     // the connection to the server failed and we are not retrying, so transition to the
                                     // DISCONNECTED state
                                     serverConnection.become(ConnectionState.DISCONNECTED);
 
                                     // We are not retrying our connection, let anyone waiting for a connection know that we're done
                                     notifyThreadsWaitingForConnection();
-                                }
-                            } finally {
-                                if (serverConnection.getInitialRequest() instanceof ReferenceCounted) {
-                                    ((ReferenceCounted)serverConnection.getInitialRequest()).release();
                                 }
                             }
                         }
