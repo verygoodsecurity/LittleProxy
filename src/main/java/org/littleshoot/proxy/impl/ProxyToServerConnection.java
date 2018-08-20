@@ -813,10 +813,6 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             return true;
         }
 
-        // no chained proxy fallback or other retry mechanism available
-        if (initialRequest instanceof ReferenceCounted) {
-            ((ReferenceCounted)initialRequest).release();
-        }
         return false;
     }
 
@@ -968,12 +964,6 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             LOG.debug("Dropping initial request: {}", initialRequest);
         }
 
-        // we're now done with the initialRequest: it's either been forwarded to the upstream server (HTTP requests), or
-        // completely dropped (HTTPS CONNECTs). if the initialRequest is reference counted (typically because the HttpObjectAggregator is in
-        // the pipeline to generate FullHttpRequests), we need to manually release it to avoid a memory leak.
-        if (initialRequest instanceof ReferenceCounted) {
-            ((ReferenceCounted)initialRequest).release();
-        }
     }
 
     /**
