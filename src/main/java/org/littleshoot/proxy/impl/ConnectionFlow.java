@@ -208,7 +208,6 @@ class ConnectionFlow {
                                     notifyThreadsWaitingForConnection();
                                 }
                             } finally {
-                                // no chained proxy fallback or other retry mechanism available
                                 if (serverConnection.getInitialRequest() instanceof ReferenceCounted) {
                                     ((ReferenceCounted)serverConnection.getInitialRequest()).release();
                                 }

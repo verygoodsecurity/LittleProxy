@@ -813,6 +813,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             return true;
         }
 
+        // no chained proxy fallback or other retry mechanism available
         return false;
     }
 
