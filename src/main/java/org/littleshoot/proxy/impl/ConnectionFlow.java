@@ -204,6 +204,7 @@ class ConnectionFlow {
                                     lastStateBeforeFailure,
                                     cause);
                             } finally {
+                                // Do not release when there is fallback chained proxy
                                 if (!fallbackToAnotherChainedProxy) {
                                     if (serverConnection.getInitialRequest() instanceof ReferenceCounted) {
                                         ((ReferenceCounted)serverConnection.getInitialRequest()).release();

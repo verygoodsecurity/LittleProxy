@@ -794,6 +794,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
                 super.channelRead(ctx, msg);
             } catch (Throwable e) {
+                // release on error
                 if (msg instanceof ReferenceCounted) {
                     ((ReferenceCounted)msg).release();
                 }
@@ -821,6 +822,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
                 super.write(ctx, msg, promise);
             } catch (Throwable e) {
+                // release on error
                 if (msg instanceof ReferenceCounted) {
                     ((ReferenceCounted)msg).release();
                 }

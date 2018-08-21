@@ -348,6 +348,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             if (isConnecting() || getCurrentState().isDisconnectingOrDisconnected()) {
                 LOG.debug("Connection failed or timed out while waiting to write message to server. Message will be discarded: {}", msg);
 
+                // release when disconnected.
                 if (initialRequest instanceof ReferenceCounted) {
                     ((ReferenceCounted)initialRequest).release();
                 }
@@ -676,6 +677,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
              * resets its state.
              */
             if (initialRequest instanceof ReferenceCounted) {
+                // Retain message before connecting to chain proxy as it does additional write of initial request
+
                 LOG.debug("Retaining reference counted message");
                 ((ReferenceCounted) initialRequest).retain();
             }

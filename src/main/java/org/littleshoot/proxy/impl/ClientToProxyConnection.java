@@ -233,6 +233,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         try {
             filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
         } finally {
+            // releasing a copied http request
             if (currentRequest instanceof ReferenceCounted) {
                 ((ReferenceCounted)currentRequest).release();
             }
