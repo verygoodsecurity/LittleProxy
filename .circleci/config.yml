@@ -71,6 +71,7 @@ jobs:
     steps:
       - <<: *attach-workspace
       - <<: *restore-maven-cache
+      - <<: *setup-env
       - run:
           name: Deploy
           command: |
