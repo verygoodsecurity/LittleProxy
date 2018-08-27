@@ -121,7 +121,7 @@ workflows:
             - test
           filters:
             branches:
-              only: vgs-edition
+              only: /.*/
       - release:
           context: artifact-publisher
           requires:
