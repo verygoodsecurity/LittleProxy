@@ -83,6 +83,7 @@ jobs:
     steps:
       - <<: *attach-workspace
       - <<: *restore-maven-cache
+      - <<: *setup-env
       - run:
           name: Release
           command: |
