@@ -84,6 +84,9 @@ jobs:
       - <<: *attach-workspace
       - <<: *restore-maven-cache
       - <<: *setup-env
+      - add_ssh_keys:
+          fingerprints:
+          - "5c:bb:63:02:38:b1:b5:ff:a8:6e:0f:fd:d3:20:d9:1c"
       - run:
           name: Release
           command: |
