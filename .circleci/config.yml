@@ -104,26 +104,26 @@ workflows:
   build_test_and_deploy:
     jobs:
       - build:
-          context: circleci
+          context: artifact-publisher
           filters:
             tags:
               only: /.*/
       - test:
-          context: circleci
+          context: artifact-publisher
           requires:
             - build
           filters:
             tags:
               only: /.*/
       - deployment:
-          context: circleci
+          context: artifact-publisher
           requires:
             - test
           filters:
             branches:
               only: vgs-edition
       - release:
-          context: circleci
+          context: artifact-publisher
           requires:
             - test
           filters:
