@@ -1,5 +1,16 @@
 package org.littleshoot.proxy.impl;
 
+import net.dongliu.proxy.Context;
+import net.dongliu.proxy.netty.CloseTimeoutChannelHandler;
+import net.dongliu.proxy.netty.ProxyHandlerSupplier;
+import net.dongliu.proxy.netty.detector.HttpConnectProxyMatcher;
+import net.dongliu.proxy.netty.detector.HttpMatcher;
+import net.dongliu.proxy.netty.detector.HttpProxyMatcher;
+import net.dongliu.proxy.netty.detector.ProtocolDetector;
+import net.dongliu.proxy.netty.detector.Socks4ProxyMatcher;
+import net.dongliu.proxy.netty.detector.Socks5ProxyMatcher;
+import net.dongliu.proxy.ui.task.InitContextTask;
+
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -14,8 +25,10 @@ import io.netty.channel.group.ChannelGroupFuture;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
+
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.GlobalStateHandler;
 import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
@@ -53,6 +66,8 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * <p>
@@ -547,13 +562,30 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         ChannelInitializer<Channel> initializer = new ChannelInitializer<Channel>() {
             protected void initChannel(Channel ch) throws Exception {
-                new ClientToProxyConnection(
+                Context context = Context.getInstance();
+                InitContextTask task = new InitContextTask(context);
+                task.call();
+                ProxyHandlerSupplier supplier = new ProxyHandlerSupplier(requireNonNull(context.proxySetting()));
+
+                int timeoutSeconds = 500;
+                IdleStateHandler idleStateHandler = new IdleStateHandler(timeoutSeconds, timeoutSeconds,
+                    timeoutSeconds, TimeUnit.SECONDS);
+                ch.pipeline().addLast(idleStateHandler);
+                ch.pipeline().addLast(new CloseTimeoutChannelHandler());
+                ProtocolDetector protocolDetector = new ProtocolDetector(
+                    new Socks5ProxyMatcher(message -> {}, context.sslContextManager(), supplier),
+                    new Socks4ProxyMatcher(message -> {}, context.sslContextManager(), supplier),
+                    new HttpConnectProxyMatcher(message -> {}, context.sslContextManager(), supplier),
+                    new HttpProxyMatcher(message -> {}, supplier),
+                    new HttpMatcher(context.sslContextManager()),
+                    new LittleproxyCodeMatcher(
                         DefaultHttpProxyServer.this,
                         sslEngineSource,
                         authenticateSslClients,
-                        ch.pipeline(),
-                        globalTrafficShapingHandler);
-            };
+                        globalTrafficShapingHandler)
+                );
+                ch.pipeline().addLast("protocol-detector", protocolDetector);
+            }
         };
         switch (transportProtocol) {
             case TCP:

@@ -220,6 +220,14 @@
     </profiles>
 
     <dependencies>
+
+        <dependency>
+            <groupId>net.dongliu</groupId>
+            <artifactId>monkey-proxy</artifactId>
+            <version>0.13.1</version>
+        </dependency>
+
+
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
