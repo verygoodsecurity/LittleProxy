@@ -451,7 +451,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 LOG.debug("A RejectedExecutionException occurred on ProxyToServerConnection", cause);
             } else {
                 ExceptionHandler exHandler = proxyServer.getProxyToServerExHandler();
-                if (exHandler != null) {
+                System.out.println("==========1" + proxyServer.toString());
+                System.out.println("==========2" + proxyServer.getProxyToServerExHandler());
+              if (exHandler != null) {
                     LOG.debug("Custom exception handler '" + exHandler.toString() + "' invoked", cause);
                     exHandler.handle(cause);
                 } else {
