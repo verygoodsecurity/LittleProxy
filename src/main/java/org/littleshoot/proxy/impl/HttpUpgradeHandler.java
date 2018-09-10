@@ -29,8 +29,7 @@ import io.netty.util.AttributeKey;
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 
 /**
- * Handle http upgrade(websocket, http2).
- * Note: http2 client may send preface frame directly, with no upgrade request.
+ * Handle http upgrade(websocket).
  */
 public class HttpUpgradeHandler extends ChannelDuplexHandler {
     private static final Logger logger = LoggerFactory.getLogger(HttpUpgradeHandler.class);
@@ -45,7 +44,6 @@ public class HttpUpgradeHandler extends ChannelDuplexHandler {
         this.proxyToServerPipeline = proxyToServerPipeline;
     }
 
-    // read request
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (!(msg instanceof HttpMessage)) {
@@ -81,7 +79,6 @@ public class HttpUpgradeHandler extends ChannelDuplexHandler {
         ctx.fireChannelRead(msg);
     }
 
-    // read response
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (!(msg instanceof HttpObject)) {
@@ -91,7 +88,6 @@ public class HttpUpgradeHandler extends ChannelDuplexHandler {
         }
 
         if (msg instanceof HttpResponse) {
-            // either upgradeWebSocket or upgradeH2c should be true
             HttpResponse response = (HttpResponse) msg;
             if (upgradeWebSocket) {
                 upgradeWebSocketSucceed = webSocketUpgraded(response);
@@ -122,8 +118,6 @@ public class HttpUpgradeHandler extends ChannelDuplexHandler {
 
     private void upgradeWebSocket(ChannelHandlerContext ctx) {
         logger.debug("upgrade to web-socket");
-//        ctx.pipeline().replace("http-interceptor", "ws-interceptor",
-//                new WebSocketInterceptor(address.host(), wsUrl, messageListener));
 
         WebSocketFrameDecoder frameDecoder = new WebSocket13FrameDecoder(true, true, 65536, false);
         WebSocketFrameEncoder frameEncoder = new WebSocket13FrameEncoder(false);
