@@ -3,7 +3,6 @@ package org.littleshoot.proxy.impl;
 import com.google.common.net.HostAndPort;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ChannelFactory;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -257,7 +256,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     }
 
     @Override
-    protected void readRaw(ByteBuf buf) {
+    protected void readRaw(Object buf) {
         clientConnection.write(buf);
     }
 
@@ -599,12 +598,16 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             	connectionFlow
                         .then(clientConnection.RespondCONNECTSuccessful)
-                        .then(serverConnection.MitmEncryptClientChannel);
+                        .then(serverConnection.MitmEncryptClientChannel)
+                        .then(serverConnection.UpgradeProtocol);
             } else {
                 connectionFlow.then(serverConnection.StartTunneling)
                         .then(clientConnection.RespondCONNECTSuccessful)
                         .then(clientConnection.StartTunneling);
             }
+        } else {
+            // TODO does not work (reverse proxy)
+            connectionFlow.then(serverConnection.UpgradeProtocol);
         }
     }
 
@@ -722,6 +725,18 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 flow.fail();
             }
         }
+    };
+
+
+    private ConnectionFlowStep UpgradeProtocol = new ConnectionFlowStep(
+        this, AWAITING_CONNECT_OK) {
+
+        protected Future<?> execute() {
+            clientConnection.channel.pipeline().addBefore("handler", "upgrade-protocol",
+                new HttpUpgradeHandler(ctx.channel().pipeline()));
+            return ctx.channel().newSucceededFuture();
+        }
+
     };
 
     /**

@@ -6,6 +6,7 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -113,9 +114,11 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         lastReadTime = System.currentTimeMillis();
 
-        if (tunneling) {
+        final Boolean wsTunneling = ctx.channel().attr(AttributeKey.<Boolean>valueOf("tunneling")).get();
+
+        if (tunneling || (wsTunneling != null && wsTunneling)) {
             // In tunneling mode, this connection is simply shoveling bytes
-            readRaw((ByteBuf) msg);
+            readRaw(msg);
         } else {
             // If not tunneling, then we are always dealing with HttpObjects.
             readHTTP((HttpObject) msg);
@@ -204,7 +207,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param buf
      */
-    protected abstract void readRaw(ByteBuf buf);
+    protected abstract void readRaw(Object buf);
 
     /***************************************************************************
      * Writing
@@ -232,7 +235,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             if (msg instanceof HttpObject) {
                 writeHttp((HttpObject) msg);
             } else {
-                writeRaw((ByteBuf) msg);
+                writeRaw(msg);
             }
         } finally {
             LOG.debug("Wrote: {}", msg);
@@ -259,7 +262,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param buf
      */
-    protected void writeRaw(ByteBuf buf) {
+    protected void writeRaw(Object buf) {
         writeToChannel(buf);
     }
 

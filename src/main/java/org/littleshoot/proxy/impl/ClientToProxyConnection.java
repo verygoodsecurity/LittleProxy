@@ -1,6 +1,5 @@
 package org.littleshoot.proxy.impl;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -339,8 +338,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             numberOfReusedServerConnections.incrementAndGet();
         }
 
-        modifyRequestHeadersToReflectProxying(httpRequest);
-
         HttpResponse proxyToServerFilterResponse = currentFilters.proxyToServerRequest(httpRequest);
         if (proxyToServerFilterResponse != null) {
             LOG.debug("Responding to client with short-circuit response from filter: {}", proxyToServerFilterResponse);
@@ -407,7 +404,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Override
-    protected void readRaw(ByteBuf buf) {
+    protected void readRaw(Object buf) {
         currentServerConnection.write(buf);
     }
 
@@ -465,8 +462,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 HttpHeaders.setTransferEncodingChunked(httpResponse);
             }
 
-            fixHttpVersionHeaderIfNecessary(httpResponse);
-            modifyResponseHeadersToReflectProxying(httpResponse);
         }
 
         httpObject = filters.proxyToClientResponse(httpObject);
