@@ -12,6 +12,9 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.littleshoot.proxy.HttpFilters;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 import javax.net.ssl.SSLEngine;
 
 import static org.littleshoot.proxy.impl.ConnectionState.*;
@@ -79,6 +82,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * If using encryption, this holds our {@link SSLEngine}.
      */
     protected volatile SSLEngine sslEngine;
+
+    private final Executor messageRewriterExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Construct a new ProxyConnection.
@@ -775,6 +780,50 @@ abstract class ProxyConnection<I extends HttpObject> extends
                     LOG.warn("Unable to finish request tracing", t);
                 }
             }
+        }
+    }
+
+    @Sharable
+    protected class HttpMessageRewriter extends ChannelDuplexHandler {
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            HttpRequest currentRequest = (HttpRequest) msg;
+
+            ChannelPromise promise = ctx.newPromise();
+
+            messageRewriterExecutor.execute(() -> {
+                HttpFilters filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+                filterInstance.clientToProxyRequest(currentRequest);
+                promise.setSuccess();
+            });
+
+            promise.addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()) {
+                    super.channelRead(ctx, msg);
+                }
+            });
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx,
+                          Object msg, ChannelPromise promise) {
+
+            HttpRequest currentRequest = (HttpRequest) msg;
+            ChannelPromise responsePromise = ctx.newPromise();
+
+            messageRewriterExecutor.execute(() -> {
+                HttpFilters filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+                filterInstance.proxyToClientResponse(currentRequest);
+                promise.setSuccess();
+            });
+
+            responsePromise.addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()) {
+                    super.write(ctx, msg, promise);
+                }
+            });
+
         }
     }
 

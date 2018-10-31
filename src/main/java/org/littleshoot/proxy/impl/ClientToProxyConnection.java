@@ -821,6 +821,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         pipeline.addLast("requestReadMonitor", requestReadMonitor);
         pipeline.addLast("responseWrittenMonitor", responseWrittenMonitor);
 
+        pipeline.addLast("messageRewriter", new HttpMessageRewriter());
+
         pipeline.addLast(
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
