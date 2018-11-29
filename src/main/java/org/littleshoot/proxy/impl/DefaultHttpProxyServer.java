@@ -53,6 +53,7 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 /**
  * <p>
@@ -117,6 +118,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final MitmManagerFactory mitmManagerFactory;
     private final ExceptionHandler clientToProxyExHandler;
     private final ExceptionHandler proxyToServerExHandler;
+    private final Function<ProxyConnection, EventLoopGroup> processingEventLoopGroup;
     private final RequestTracer requestTracer;
     private final GlobalStateHandler globalStateHandler;
     private final HttpFiltersSource filtersSource;
@@ -255,6 +257,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             MitmManagerFactory mitmManagerFactory,
             ExceptionHandler clientToProxyExHandler,
             ExceptionHandler proxyToServerExHandler,
+            Function<ProxyConnection, EventLoopGroup> processingEventLoopGroup,
             RequestTracer requestTracer,
             GlobalStateHandler globalStateHandler,
             HttpFiltersSource filtersSource,
@@ -283,6 +286,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.mitmManagerFactory = mitmManagerFactory;
         this.clientToProxyExHandler = clientToProxyExHandler;
         this.proxyToServerExHandler = proxyToServerExHandler;
+        this.processingEventLoopGroup = processingEventLoopGroup;
         this.requestTracer = requestTracer;
         this.globalStateHandler = globalStateHandler;
         this.filtersSource = filtersSource;
@@ -427,6 +431,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     mitmManagerFactory,
                     clientToProxyExHandler,
                     proxyToServerExHandler,
+                    processingEventLoopGroup,
                     requestTracer,
                     globalStateHandler,
                     filtersSource,
@@ -548,6 +553,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         ChannelInitializer<Channel> initializer = new ChannelInitializer<Channel>() {
             protected void initChannel(Channel ch) throws Exception {
                 new ClientToProxyConnection(
+                        ch,
                         DefaultHttpProxyServer.this,
                         sslEngineSource,
                         authenticateSslClients,
@@ -616,6 +622,14 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return proxyToServerExHandler;
     }
 
+    protected EventLoopGroup getProcessingEventLoopGroup(ProxyConnection proxyConnection) {
+        if (processingEventLoopGroup == null) {
+            throw new RuntimeException("Processing event loop group must be provided!");
+        }
+
+        return processingEventLoopGroup.apply(proxyConnection);
+    }
+
     protected GlobalStateHandler getGlobalStateHandler() {
         return globalStateHandler;
     }
@@ -668,6 +682,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private MitmManagerFactory mitmManagerFactory = null;
         private ExceptionHandler clientToProxyExHandler = null;
         private ExceptionHandler proxyToServerExHandler = null;
+        private Function<ProxyConnection, EventLoopGroup> processingEventLoopGroup = null;
         private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
@@ -704,6 +719,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 MitmManagerFactory mitmManagerFactory,
                 ExceptionHandler clientToProxyExHandler,
                 ExceptionHandler proxyToServerExHandler,
+                Function<ProxyConnection, EventLoopGroup> processingEventLoopGroup,
                 RequestTracer requestTracer,
                 GlobalStateHandler globalStateHandler,
                 HttpFiltersSource filtersSource,
@@ -731,6 +747,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.mitmManagerFactory = mitmManagerFactory;
             this.clientToProxyExHandler = clientToProxyExHandler;
             this.proxyToServerExHandler = proxyToServerExHandler;
+            this.processingEventLoopGroup = processingEventLoopGroup;
             this.requestTracer = requestTracer;
             this.globalStateHandler = globalStateHandler;
             this.filtersSource = filtersSource;
@@ -882,16 +899,16 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
-        public HttpProxyServerBootstrap withRequestTracer(
-            RequestTracer requestTracer) {
-            this.requestTracer = requestTracer;
+        public HttpProxyServerBootstrap withProcessingEventLoopGroup(
+            Function<ProxyConnection, EventLoopGroup> processingEventLoopGroup) {
+            this.processingEventLoopGroup = processingEventLoopGroup;
             return this;
         }
 
         @Override
-        public HttpProxyServerBootstrap withCustomGlobalState(
-            GlobalStateHandler globalStateHandler) {
-            this.globalStateHandler = globalStateHandler;
+        public HttpProxyServerBootstrap withRequestTracer(
+            RequestTracer requestTracer) {
+            this.requestTracer = requestTracer;
             return this;
         }
 
@@ -1017,7 +1034,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler,
+                    clientToProxyExHandler, proxyToServerExHandler, processingEventLoopGroup, requestTracer, globalStateHandler,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,

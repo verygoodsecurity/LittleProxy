@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -140,12 +141,15 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
 
     ClientToProxyConnection(
+              Channel channel,
             final DefaultHttpProxyServer proxyServer,
             SslEngineSource sslEngineSource,
             boolean authenticateClients,
             ChannelPipeline pipeline,
             GlobalTrafficShapingHandler globalTrafficShapingHandler) {
         super(AWAITING_INITIAL, proxyServer, false);
+
+        this.channel = channel;
 
         initChannelPipeline(pipeline);
 
@@ -796,12 +800,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        if (proxyServer.getGlobalStateHandler() != null) {
-            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
-        }
+        final EventLoopGroup processingEventLoopGroup = proxyServer.getProcessingEventLoopGroup(this);
 
-        pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(processingEventLoopGroup, "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(processingEventLoopGroup, "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast("encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
@@ -818,19 +820,15 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
         }
 
-        pipeline.addLast("requestReadMonitor", requestReadMonitor);
-        pipeline.addLast("responseWrittenMonitor", responseWrittenMonitor);
+        pipeline.addLast(processingEventLoopGroup,  "requestReadMonitor", requestReadMonitor);
+        pipeline.addLast(processingEventLoopGroup, "responseWrittenMonitor", responseWrittenMonitor);
 
         pipeline.addLast(
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        if (proxyServer.getGlobalStateHandler() != null) {
-            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
-        }
-
-        pipeline.addLast("handler", this);
+        pipeline.addLast(processingEventLoopGroup, "handler", this);
 
     }
 

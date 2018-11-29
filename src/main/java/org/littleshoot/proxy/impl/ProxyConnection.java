@@ -60,7 +60,7 @@ import static org.littleshoot.proxy.impl.ConnectionState.*;
  *            the type of "initial" message. This will be either
  *            {@link HttpResponse} or {@link HttpRequest}.
  */
-abstract class ProxyConnection<I extends HttpObject> extends
+public abstract class ProxyConnection<I extends HttpObject> extends
         SimpleChannelInboundHandler<Object> {
 
     protected final ProxyConnectionLogger LOG = new ProxyConnectionLogger(this);
@@ -69,7 +69,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     protected final boolean runsAsSslClient;
 
     protected volatile ChannelHandlerContext ctx;
-    protected volatile Channel channel;
+    public volatile Channel channel;
 
     private volatile ConnectionState currentState;
     private volatile boolean tunneling = false;
