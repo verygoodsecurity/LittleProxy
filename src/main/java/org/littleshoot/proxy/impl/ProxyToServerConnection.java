@@ -644,6 +644,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 protected void initChannel(Channel ch) throws Exception {
+                    serverConnection.channel = ch;
                     initChannelPipeline(ch.pipeline(), initialRequest);
                 };
             });
