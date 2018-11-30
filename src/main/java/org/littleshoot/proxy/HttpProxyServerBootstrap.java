@@ -1,13 +1,9 @@
 package org.littleshoot.proxy;
 
-import org.littleshoot.proxy.impl.ProxyConnection;
 import org.littleshoot.proxy.impl.ThreadPoolConfiguration;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 
 import java.net.InetSocketAddress;
-import java.util.function.Function;
-
-import io.netty.channel.EventLoopGroup;
 
 /**
  * Configures and starts an {@link HttpProxyServer}. The HttpProxyServer is
@@ -217,7 +213,7 @@ public interface HttpProxyServerBootstrap {
         ExceptionHandler proxyToServerExHandler);
 
 
-    HttpProxyServerBootstrap withProcessingEventLoopGroup(Function<ProxyConnection, EventLoopGroup> eventLoopGroup);
+    HttpProxyServerBootstrap withProcessingEventLoopGroup(ProcessingEventLoopGroup eventLoopGroup);
 
     /**
      * <p>

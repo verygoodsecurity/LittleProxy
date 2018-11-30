@@ -644,7 +644,6 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 protected void initChannel(Channel ch) throws Exception {
-                    serverConnection.channel = ch;
                     initChannelPipeline(ch.pipeline(), initialRequest);
                 };
             });
@@ -830,7 +829,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      */
     private void resetConnectionForRetry() throws UnknownHostException {
         // Remove ourselves as handler on the old context
-        this.ctx.pipeline().remove(this);
+        if (this.ctx.pipeline().get("handler") != null) {
+            this.ctx.pipeline().remove(this);
+        }
         this.ctx.close();
         this.ctx = null;
 
@@ -904,9 +905,9 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
 
-        final EventLoopGroup processingEventLoopGroup = proxyServer.getProcessingEventLoopGroup(clientConnection);
+        final EventLoopGroup processingEventLoopGroup = clientConnection.processingEventLoopGroup;
 
-        pipeline.addLast( processingEventLoopGroup,  "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(processingEventLoopGroup,  "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(processingEventLoopGroup,  "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast("encoder", new HttpRequestEncoder());

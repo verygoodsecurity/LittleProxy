@@ -140,8 +140,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
 
+    final EventLoopGroup processingEventLoopGroup;
+
     ClientToProxyConnection(
-              Channel channel,
+            Channel channel,
             final DefaultHttpProxyServer proxyServer,
             SslEngineSource sslEngineSource,
             boolean authenticateClients,
@@ -150,6 +152,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         super(AWAITING_INITIAL, proxyServer, false);
 
         this.channel = channel;
+
+        this.processingEventLoopGroup = proxyServer.getProcessingEventLoopGroup(channel);
 
         initChannelPipeline(pipeline);
 
@@ -799,8 +803,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         if (proxyServer.getRequestTracer() != null) {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
-
-        final EventLoopGroup processingEventLoopGroup = proxyServer.getProcessingEventLoopGroup(this);
 
         pipeline.addLast(processingEventLoopGroup, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(processingEventLoopGroup, "bytesWrittenMonitor", bytesWrittenMonitor);
