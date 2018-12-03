@@ -118,16 +118,8 @@ class ConnectionFlow {
         suppressInitialRequest = suppressInitialRequest
                 || currentStep.shouldSuppressInitialRequest();
 
-        if (currentStep.shouldExecuteOnEventLoop()) {
-            connection.ctx.executor().submit(new Runnable() {
-                @Override
-                public void run() {
-                    doProcessCurrentStep(LOG);
-                }
-            });
-        } else {
-            doProcessCurrentStep(LOG);
-        }
+
+        doProcessCurrentStep(LOG);
     }
 
     /**

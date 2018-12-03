@@ -147,7 +147,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             final DefaultHttpProxyServer proxyServer,
             SslEngineSource sslEngineSource,
             boolean authenticateClients,
-            ChannelPipeline pipeline,
             GlobalTrafficShapingHandler globalTrafficShapingHandler) {
         super(AWAITING_INITIAL, proxyServer, false);
 
@@ -155,11 +154,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         this.processingEventLoopGroup = proxyServer.getProcessingEventLoopGroup(channel);
 
-        initChannelPipeline(pipeline);
+        initChannelPipeline(channel.pipeline());
 
         if (sslEngineSource != null) {
             LOG.debug("Enabling encryption of traffic from client to proxy");
-            encrypt(pipeline, sslEngineSource.newSslEngine(),
+            encrypt(channel.pipeline(), sslEngineSource.newSslEngine(),
                     authenticateClients)
                     .addListener(
                             new GenericFutureListener<Future<? super Channel>>() {
@@ -801,7 +800,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         LOG.debug("Configuring ChannelPipeline");
 
         if (proxyServer.getRequestTracer() != null) {
-            pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
+            pipeline.addLast(processingEventLoopGroup, "requestTracerHandler", new RequestTracerHandler(this));
         }
 
         pipeline.addLast(processingEventLoopGroup, "bytesReadMonitor", bytesReadMonitor);

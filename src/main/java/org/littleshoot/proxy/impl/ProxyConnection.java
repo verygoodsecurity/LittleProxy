@@ -320,7 +320,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         protected Future execute() {
             try {
-                ChannelPipeline pipeline = ctx.pipeline();
+                ChannelPipeline pipeline = channel.pipeline();
                 if (pipeline.get("encoder") != null) {
                     pipeline.remove("encoder");
                 }
@@ -352,7 +352,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      */
     protected Future<Channel> encrypt(SSLEngine sslEngine,
             boolean authenticateClients) {
-        return encrypt(ctx.pipeline(), sslEngine, authenticateClients);
+        return encrypt(channel.pipeline(), sslEngine, authenticateClients);
     }
 
     /**
@@ -563,10 +563,10 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
     /**
      * Request the ProxyServer for Filters.
-     * 
+     *
      * By default, no-op filters are returned by DefaultHttpProxyServer.
      * Subclasses of ProxyConnection can change this behaviour.
-     * 
+     *
      * @param httpRequest
      *            Filter attached to the give HttpRequest (if any)
      * @return
@@ -592,8 +592,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         try {
             this.ctx = ctx;
-            this.channel = ctx.channel();
-            this.proxyServer.registerChannel(ctx.channel());
+            this.proxyServer.registerChannel(this.channel);
         } finally {
             super.channelRegistered(ctx);
         }

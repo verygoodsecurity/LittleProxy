@@ -644,6 +644,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 protected void initChannel(Channel ch) throws Exception {
+                    serverConnection.channel = ch;
                     initChannelPipeline(ch.pipeline(), initialRequest);
                 };
             });
@@ -828,13 +829,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * @throws UnknownHostException when {@link #setupConnectionParameters()} is unable to resolve the hostname
      */
     private void resetConnectionForRetry() throws UnknownHostException {
-        // Remove ourselves as handler on the old context
-        if (this.ctx.pipeline().get("handler") != null) {
-            this.ctx.pipeline().remove(this);
-        }
-        this.ctx.close();
-        this.ctx = null;
-
+        this.channel.close();
         this.setupConnectionParameters();
     }
 
