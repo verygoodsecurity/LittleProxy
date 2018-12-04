@@ -7,6 +7,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
@@ -624,7 +625,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
     protected EventLoopGroup getProcessingEventLoopGroup(Channel channel) {
         if (processingEventLoopGroup == null) {
-            throw new RuntimeException("Processing event loop group must be provided!");
+            return new DefaultEventLoop();
         }
 
         return processingEventLoopGroup.forChannel(channel);
