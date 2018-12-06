@@ -5,6 +5,8 @@ import org.littleshoot.proxy.ratelimit.RateLimiter;
 
 import java.net.InetSocketAddress;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * Configures and starts an {@link HttpProxyServer}. The HttpProxyServer is
  * built using {@link #start()}. Sensible defaults are available for all
@@ -213,7 +215,22 @@ public interface HttpProxyServerBootstrap {
         ExceptionHandler proxyToServerExHandler);
 
 
-    HttpProxyServerBootstrap withProcessingEventLoopGroup(ProcessingEventLoopGroup eventLoopGroup);
+    /**
+     * <p>
+     * Specify an {@link GlobalStateHandler} to customize a global state based on channel attributes
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param globalStateHandler
+     * @return proxy server bootstrap
+     */
+    HttpProxyServerBootstrap withCustomGlobalState(
+        GlobalStateHandler globalStateHandler);
+
+
 
     /**
      * <p>

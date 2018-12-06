@@ -20,7 +20,6 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.GlobalStateHandler;
 import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
-import org.littleshoot.proxy.ProcessingEventLoopGroup;
 import org.littleshoot.proxy.ratelimit.NoOpRateLimiter;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 import org.littleshoot.proxy.ChainedProxyManager;
@@ -119,7 +118,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final MitmManagerFactory mitmManagerFactory;
     private final ExceptionHandler clientToProxyExHandler;
     private final ExceptionHandler proxyToServerExHandler;
-    private final ProcessingEventLoopGroup processingEventLoopGroup;
     private final RequestTracer requestTracer;
     private final GlobalStateHandler globalStateHandler;
     private final HttpFiltersSource filtersSource;
@@ -258,7 +256,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             MitmManagerFactory mitmManagerFactory,
             ExceptionHandler clientToProxyExHandler,
             ExceptionHandler proxyToServerExHandler,
-            ProcessingEventLoopGroup processingEventLoopGroup,
             RequestTracer requestTracer,
             GlobalStateHandler globalStateHandler,
             HttpFiltersSource filtersSource,
@@ -620,14 +617,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return proxyToServerExHandler;
     }
 
-    protected EventLoopGroup getProcessingEventLoopGroup(Channel channel) {
-        if (processingEventLoopGroup == null) {
-            return new DefaultEventLoop();
-        }
-
-        return processingEventLoopGroup.forChannel(channel);
-    }
-
     protected GlobalStateHandler getGlobalStateHandler() {
         return globalStateHandler;
     }
@@ -680,7 +669,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private MitmManagerFactory mitmManagerFactory = null;
         private ExceptionHandler clientToProxyExHandler = null;
         private ExceptionHandler proxyToServerExHandler = null;
-        private ProcessingEventLoopGroup processingEventLoopGroup = null;
         private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
@@ -717,7 +705,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 MitmManagerFactory mitmManagerFactory,
                 ExceptionHandler clientToProxyExHandler,
                 ExceptionHandler proxyToServerExHandler,
-                ProcessingEventLoopGroup processingEventLoopGroup,
                 RequestTracer requestTracer,
                 GlobalStateHandler globalStateHandler,
                 HttpFiltersSource filtersSource,
@@ -745,7 +732,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.mitmManagerFactory = mitmManagerFactory;
             this.clientToProxyExHandler = clientToProxyExHandler;
             this.proxyToServerExHandler = proxyToServerExHandler;
-            this.processingEventLoopGroup = processingEventLoopGroup;
             this.requestTracer = requestTracer;
             this.globalStateHandler = globalStateHandler;
             this.filtersSource = filtersSource;
@@ -897,9 +883,9 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
-        public HttpProxyServerBootstrap withProcessingEventLoopGroup(
-            ProcessingEventLoopGroup processingEventLoopGroup) {
-            this.processingEventLoopGroup = processingEventLoopGroup;
+        public HttpProxyServerBootstrap withCustomGlobalState(
+            GlobalStateHandler globalStateHandler) {
+            this.globalStateHandler = globalStateHandler;
             return this;
         }
 
