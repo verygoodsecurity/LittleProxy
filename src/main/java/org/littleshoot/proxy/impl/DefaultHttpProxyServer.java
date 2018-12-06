@@ -7,7 +7,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
@@ -883,16 +882,16 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
-        public HttpProxyServerBootstrap withCustomGlobalState(
-            GlobalStateHandler globalStateHandler) {
-            this.globalStateHandler = globalStateHandler;
+        public HttpProxyServerBootstrap withRequestTracer(
+            RequestTracer requestTracer) {
+            this.requestTracer = requestTracer;
             return this;
         }
 
         @Override
-        public HttpProxyServerBootstrap withRequestTracer(
-            RequestTracer requestTracer) {
-            this.requestTracer = requestTracer;
+        public HttpProxyServerBootstrap withCustomGlobalState(
+            GlobalStateHandler globalStateHandler) {
+            this.globalStateHandler = globalStateHandler;
             return this;
         }
 
