@@ -917,7 +917,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         int numberOfBytesToBuffer = proxyServer.getFiltersSource()
                 .getMaximumResponseBufferSizeInBytes();
         if (numberOfBytesToBuffer > 0) {
-            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
+            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
         }
 
         pipeline.addLast(processingEventLoopGroup,  "responseReadMonitor", responseReadMonitor);

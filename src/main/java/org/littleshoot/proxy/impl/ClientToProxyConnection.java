@@ -818,10 +818,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         int numberOfBytesToBuffer = proxyServer.getFiltersSource()
                 .getMaximumRequestBufferSizeInBytes();
         if (numberOfBytesToBuffer > 0) {
-            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
+            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
         }
 
-        pipeline.addLast(processingEventLoopGroup,  "requestReadMonitor", requestReadMonitor);
+        pipeline.addLast(processingEventLoopGroup, "requestReadMonitor", requestReadMonitor);
         pipeline.addLast(processingEventLoopGroup, "responseWrittenMonitor", responseWrittenMonitor);
 
         pipeline.addLast(

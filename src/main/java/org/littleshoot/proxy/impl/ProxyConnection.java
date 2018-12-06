@@ -69,7 +69,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     protected final boolean runsAsSslClient;
 
     protected volatile ChannelHandlerContext ctx;
-    public volatile Channel channel;
+    protected volatile Channel channel;
 
     private volatile ConnectionState currentState;
     private volatile boolean tunneling = false;
@@ -420,9 +420,9 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param numberOfBytesToBuffer
      */
     protected void aggregateContentForFiltering(ChannelPipeline pipeline,
-            int numberOfBytesToBuffer) {
-        pipeline.addLast("inflater", new HttpContentDecompressor());
-        pipeline.addLast("aggregator", new HttpObjectAggregator(
+            int numberOfBytesToBuffer, EventLoopGroup processingEventLoop) {
+        pipeline.addLast(processingEventLoop, "inflater", new HttpContentDecompressor());
+        pipeline.addLast(processingEventLoop, "aggregator", new HttpObjectAggregator(
                 numberOfBytesToBuffer));
     }
 
