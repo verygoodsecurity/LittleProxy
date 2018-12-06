@@ -832,6 +832,67 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
     }
 
+    public class ProcessingEvenLoop extends DefaultEventLoop {
+
+        private final Channel clientToProxyChannel;
+        private Channel proxyToServerChannel;
+
+        ProcessingEvenLoop(Channel clientToProxyChannel) {
+            this.clientToProxyChannel = clientToProxyChannel;
+            this.proxyToServerChannel = null;
+        }
+
+        @Override
+        // this method is a hack. I just reused existing API
+        // to set upstream channel not to release the thread early.
+        // It is not supposed to be called for what the API
+        // was designed initially.
+
+        // this method is thread safe as it will be called in the same thread
+        public ChannelFuture register(Channel channel) {
+            this.proxyToServerChannel = channel;
+            return channel.newFailedFuture(new RuntimeException("Hack method is used incorrectly!"));
+        }
+
+        @Override
+        protected void run() {
+            if (clientToProxyChannel == null) {
+                throw new RuntimeException("Channel must be set before using processing event loop");
+            }
+            for (;;) {
+                Runnable task = takeTask();
+                if (task != null) {
+
+                    runTask(task);
+
+                    updateLastExecutionTime();
+                }
+
+                if (confirmShutdown()) {
+                    break;
+                }
+
+                if ((proxyToServerChannel == null && !clientToProxyChannel.isActive()) ||
+                    (proxyToServerChannel != null &&
+                        (!clientToProxyChannel.isActive() && !proxyToServerChannel.isActive()))) {
+                    shutdownGracefully();
+                }
+            }
+        }
+
+        private void runTask(Runnable task) {
+            if (proxyServer.getGlobalStateHandler() != null) {
+                try {
+                    proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyChannel);
+                    task.run();
+                } finally {
+                    proxyServer.getGlobalStateHandler().clear();
+                }
+            } else {
+                task.run();
+            }
+        }
+    }
 
     /**
      * Utility handler for monitoring bytes written on this connection.

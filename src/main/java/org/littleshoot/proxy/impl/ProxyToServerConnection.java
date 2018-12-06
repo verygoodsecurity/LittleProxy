@@ -902,6 +902,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         final EventLoopGroup processingEventLoopGroup = clientConnection.processingEventLoopGroup;
 
+        processingEventLoopGroup.register(channel);
+
         pipeline.addLast(processingEventLoopGroup,  "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(processingEventLoopGroup,  "bytesWrittenMonitor", bytesWrittenMonitor);
 
