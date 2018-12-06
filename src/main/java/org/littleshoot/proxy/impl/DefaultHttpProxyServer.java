@@ -55,7 +55,6 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 
 /**
  * <p>
@@ -288,7 +287,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.mitmManagerFactory = mitmManagerFactory;
         this.clientToProxyExHandler = clientToProxyExHandler;
         this.proxyToServerExHandler = proxyToServerExHandler;
-        this.processingEventLoopGroup = processingEventLoopGroup;
         this.requestTracer = requestTracer;
         this.globalStateHandler = globalStateHandler;
         this.filtersSource = filtersSource;
@@ -433,7 +431,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     mitmManagerFactory,
                     clientToProxyExHandler,
                     proxyToServerExHandler,
-                    processingEventLoopGroup,
                     requestTracer,
                     globalStateHandler,
                     filtersSource,
@@ -1035,7 +1032,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler, processingEventLoopGroup, requestTracer, globalStateHandler,
+                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
