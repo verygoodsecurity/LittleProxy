@@ -872,9 +872,9 @@ abstract class ProxyConnection<I extends HttpObject> extends
                     break;
                 }
 
-                if ((proxyToServerChannel == null && !clientToProxyChannel.isActive()) ||
+                if ((proxyToServerChannel == null && !clientToProxyChannel.isRegistered()) ||
                     (proxyToServerChannel != null &&
-                        (!clientToProxyChannel.isActive() && !proxyToServerChannel.isActive()))) {
+                        (!clientToProxyChannel.isRegistered() && !proxyToServerChannel.isRegistered()))) {
                     shutdownGracefully();
                 }
             }
