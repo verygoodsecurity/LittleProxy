@@ -12,9 +12,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.littleshoot.proxy.HttpFilters;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-
 import javax.net.ssl.SSLEngine;
 
 import static org.littleshoot.proxy.impl.ConnectionState.*;
@@ -835,8 +832,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
     }
 
-    private static final Executor executor = Executors.newCachedThreadPool();
-
     public class ProcessingEvenLoop extends DefaultEventLoop {
 
         private final Channel clientToProxyChannel;
@@ -898,7 +893,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 addTask(task);
             }
             if (!started) {
-                executor.execute(this::run);
+                proxyServer.getProcessingExecutor().execute(this::run);
                 started = true;
             }
         }
