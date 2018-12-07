@@ -879,13 +879,13 @@ abstract class ProxyConnection<I extends HttpObject> extends
                       (isClosed(clientToProxyChannel) && isClosed(proxyToServerChannel)))) {
                     synchronized (lock) {
                         if (!hasTasks()) {
+                            started = false;
                             break;
                         }
                     }
 
                 }
             }
-            started = false;
         }
 
         @Override
