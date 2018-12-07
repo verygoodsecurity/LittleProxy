@@ -12,6 +12,9 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.littleshoot.proxy.HttpFilters;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 import javax.net.ssl.SSLEngine;
 
 import static org.littleshoot.proxy.impl.ConnectionState.*;
@@ -832,10 +835,15 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
     }
 
+    private static final Executor executor = Executors.newCachedThreadPool();
+
     public class ProcessingEvenLoop extends DefaultEventLoop {
 
         private final Channel clientToProxyChannel;
         private Channel proxyToServerChannel;
+        private volatile Thread thread;
+        private volatile boolean started = false;
+        private final Object lock = new Object();
 
         ProcessingEvenLoop(Channel clientToProxyChannel) {
             this.clientToProxyChannel = clientToProxyChannel;
@@ -859,25 +867,49 @@ abstract class ProxyConnection<I extends HttpObject> extends
             if (clientToProxyChannel == null) {
                 throw new RuntimeException("Channel must be set before using processing event loop");
             }
+            this.thread = Thread.currentThread();
             for (;;) {
                 Runnable task = takeTask();
                 if (task != null) {
-
                     runTask(task);
-
                     updateLastExecutionTime();
                 }
+                if ((proxyToServerChannel == null && isClosed(clientToProxyChannel)) ||
+                  (proxyToServerChannel != null &&
+                      (isClosed(clientToProxyChannel) && isClosed(proxyToServerChannel)))) {
+                    synchronized (lock) {
+                        if (!hasTasks()) {
+                            break;
+                        }
+                    }
 
-                if (confirmShutdown()) {
-                    break;
-                }
-
-                if ((proxyToServerChannel == null && !clientToProxyChannel.isRegistered()) ||
-                    (proxyToServerChannel != null &&
-                        (!clientToProxyChannel.isRegistered() && !proxyToServerChannel.isRegistered()))) {
-                    shutdownGracefully();
                 }
             }
+            started = false;
+        }
+
+        @Override
+        public void execute(Runnable task) {
+            if (task == null) {
+                throw new NullPointerException("task");
+            }
+
+            synchronized (lock) {
+                addTask(task);
+            }
+            if (!started) {
+                executor.execute(this::run);
+                started = true;
+            }
+        }
+
+        @Override
+        public boolean inEventLoop() {
+            return thread == Thread.currentThread();
+        }
+
+        private boolean isClosed(Channel channel) {
+            return channel == null || (!channel.isRegistered() && !channel.isActive() && !channel.isOpen());
         }
 
         private void runTask(Runnable task) {
