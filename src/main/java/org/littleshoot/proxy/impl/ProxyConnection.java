@@ -836,6 +836,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         private final Channel channel;
 
+        private volatile Thread thread;
+
         ProcessingEvenLoop(Channel channel) {
             this.channel = channel;
         }
@@ -845,8 +847,17 @@ abstract class ProxyConnection<I extends HttpObject> extends
             proxyServer.getProcessingExecutor().execute(runTask(task));
         }
 
+        @Override
+        public boolean inEventLoop() {
+            if (thread == null) {
+                return false;
+            }
+            return thread == Thread.currentThread();
+        }
+
         private Runnable runTask(Runnable task) {
             return () -> {
+                this.thread = Thread.currentThread();
                 if (proxyServer.getGlobalStateHandler() != null) {
                     try {
                         proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
@@ -859,6 +870,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 }
             };
         }
+
+
     }
 
     /**

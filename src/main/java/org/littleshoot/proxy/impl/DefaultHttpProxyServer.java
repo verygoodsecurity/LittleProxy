@@ -1042,7 +1042,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             }
 
             if (processingExecutorService == null) {
-                this.processingExecutorService = new DefaultEventExecutorGroup(8);
+                this.processingExecutorService = new DefaultEventExecutorGroup(1);
             }
 
             return new DefaultHttpProxyServer(serverGroup,
