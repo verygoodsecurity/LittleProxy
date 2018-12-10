@@ -834,90 +834,30 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
     public class ProcessingEvenLoop extends DefaultEventLoop {
 
-        private final Channel clientToProxyChannel;
-        private Channel proxyToServerChannel;
-        private volatile Thread thread;
-        private volatile boolean started = false;
-        private final Object lock = new Object();
+        private final Channel channel;
 
-        ProcessingEvenLoop(Channel clientToProxyChannel) {
-            this.clientToProxyChannel = clientToProxyChannel;
-            this.proxyToServerChannel = null;
-        }
-
-        @Override
-        // this method is a hack. I just reused existing API
-        // to set upstream channel not to release the thread early.
-        // It is not supposed to be called for what the API
-        // was designed initially.
-
-        // this method is thread safe as it will be called in the same thread
-        public ChannelFuture register(Channel channel) {
-            this.proxyToServerChannel = channel;
-            return channel.newFailedFuture(new RuntimeException("Hack method is used incorrectly!"));
-        }
-
-        @Override
-        protected void run() {
-            if (clientToProxyChannel == null) {
-                throw new RuntimeException("Channel must be set before using processing event loop");
-            }
-            this.thread = Thread.currentThread();
-            for (;;) {
-                Runnable task = takeTask();
-                if (task != null) {
-                    runTask(task);
-                    updateLastExecutionTime();
-                }
-                if ((proxyToServerChannel == null && isClosed(clientToProxyChannel)) ||
-                  (proxyToServerChannel != null &&
-                      (isClosed(clientToProxyChannel) && isClosed(proxyToServerChannel)))) {
-                    synchronized (lock) {
-                        if (!hasTasks()) {
-                            started = false;
-                            break;
-                        }
-                    }
-
-                }
-            }
+        ProcessingEvenLoop(Channel channel) {
+            this.channel = channel;
         }
 
         @Override
         public void execute(Runnable task) {
-            if (task == null) {
-                throw new NullPointerException("task");
-            }
-
-            synchronized (lock) {
-                addTask(task);
-            }
-            if (!started) {
-                proxyServer.getProcessingExecutor().execute(this::run);
-                started = true;
-            }
+            proxyServer.getProcessingExecutor().execute(runTask(task));
         }
 
-        @Override
-        public boolean inEventLoop() {
-            return thread == Thread.currentThread();
-        }
-
-        private boolean isClosed(Channel channel) {
-            return channel == null || (!channel.isRegistered() && !channel.isActive() && !channel.isOpen());
-        }
-
-        private void runTask(Runnable task) {
-            if (proxyServer.getGlobalStateHandler() != null) {
-                try {
-                    proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyChannel);
+        private Runnable runTask(Runnable task) {
+            return () -> {
+                if (proxyServer.getGlobalStateHandler() != null) {
+                    try {
+                        proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
+                        task.run();
+                    } finally {
+                        proxyServer.getGlobalStateHandler().clear();
+                    }
+                } else {
                     task.run();
-                } finally {
-                    proxyServer.getGlobalStateHandler().clear();
                 }
-            } else {
-                task.run();
-            }
+            };
         }
     }
 

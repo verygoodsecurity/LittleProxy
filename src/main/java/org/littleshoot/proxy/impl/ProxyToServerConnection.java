@@ -897,7 +897,6 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             HttpRequest httpRequest) {
 
         final EventLoopGroup processingEventLoopGroup = clientConnection.processingEventLoopGroup;
-        processingEventLoopGroup.register(channel);
 
         if (trafficHandler != null) {
             pipeline.addLast(processingEventLoopGroup, "global-traffic-shaping", trafficHandler);
