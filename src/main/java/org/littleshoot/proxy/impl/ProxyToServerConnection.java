@@ -896,19 +896,18 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void initChannelPipeline(ChannelPipeline pipeline,
             HttpRequest httpRequest) {
 
-        if (trafficHandler != null) {
-            pipeline.addLast("global-traffic-shaping", trafficHandler);
-        }
-
         final EventLoopGroup processingEventLoopGroup = clientConnection.processingEventLoopGroup;
-
         processingEventLoopGroup.register(channel);
+
+        if (trafficHandler != null) {
+            pipeline.addLast(processingEventLoopGroup, "global-traffic-shaping", trafficHandler);
+        }
 
         pipeline.addLast(processingEventLoopGroup,  "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(processingEventLoopGroup,  "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast("encoder", new HttpRequestEncoder());
-        pipeline.addLast("decoder", new HeadAwareHttpResponseDecoder(
+        pipeline.addLast(processingEventLoopGroup, "encoder", new HttpRequestEncoder());
+        pipeline.addLast(processingEventLoopGroup, "decoder", new HeadAwareHttpResponseDecoder(
         		proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
@@ -924,7 +923,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         pipeline.addLast(processingEventLoopGroup, "requestWrittenMonitor", requestWrittenMonitor);
 
         // Set idle timeout
-        pipeline.addLast(
+        pipeline.addLast(processingEventLoopGroup,
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
