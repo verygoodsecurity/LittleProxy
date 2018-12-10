@@ -688,7 +688,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private ExceptionHandler proxyToServerExHandler = null;
         private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
-        private ExecutorService executor = null;
+        private ExecutorService processingExecutorService = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -725,7 +725,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 ExceptionHandler proxyToServerExHandler,
                 RequestTracer requestTracer,
                 GlobalStateHandler globalStateHandler,
-                ExecutorService executor,
+                ExecutorService processingExecutorService,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -753,10 +753,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.proxyToServerExHandler = proxyToServerExHandler;
             this.requestTracer = requestTracer;
             this.globalStateHandler = globalStateHandler;
-            this.executor = executor;
-            if (executor == null) {
-                this.executor = new DefaultEventExecutorGroup(8);
-            }
+            this.processingExecutorService = processingExecutorService;
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             this.transparent = transparent;
@@ -921,8 +918,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         @Override
         public HttpProxyServerBootstrap withProcessingExecutorService(
-            ExecutorService executor) {
-            this.executor = executor;
+            ExecutorService processingExecutorService) {
+            this.processingExecutorService = processingExecutorService;
             return this;
         }
 
@@ -1044,11 +1041,15 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads, clientToProxyWorkerThreads, proxyToServerWorkerThreads);
             }
 
+            if (processingExecutorService == null) {
+                this.processingExecutorService = new DefaultEventExecutorGroup(8);
+            }
+
             return new DefaultHttpProxyServer(serverGroup,
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler, executor,
+                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler, processingExecutorService,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
