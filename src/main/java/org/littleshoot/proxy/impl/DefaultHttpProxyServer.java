@@ -15,6 +15,7 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.GlobalStateHandler;
@@ -753,6 +754,9 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.requestTracer = requestTracer;
             this.globalStateHandler = globalStateHandler;
             this.executor = executor;
+            if (executor == null) {
+                this.executor = new DefaultEventExecutorGroup(8);
+            }
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             this.transparent = transparent;
