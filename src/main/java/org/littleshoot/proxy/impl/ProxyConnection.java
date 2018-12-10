@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -836,7 +837,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         private final Channel channel;
 
-        private volatile Thread thread;
+        private volatile EventExecutor eventLoop;
 
         ProcessingEvenLoop(Channel channel) {
             this.channel = channel;
@@ -844,20 +845,22 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         @Override
         public void execute(Runnable task) {
-            proxyServer.getProcessingExecutor().execute(runTask(task));
+            if (eventLoop == null) {
+                eventLoop = proxyServer.getProcessingExecutor().next();
+            }
+            eventLoop.execute(runTask(task));
         }
 
         @Override
         public boolean inEventLoop() {
-            if (thread == null) {
+            if (eventLoop == null) {
                 return false;
             }
-            return thread == Thread.currentThread();
+            return eventLoop.inEventLoop();
         }
 
         private Runnable runTask(Runnable task) {
             return () -> {
-                this.thread = Thread.currentThread();
                 if (proxyServer.getGlobalStateHandler() != null) {
                     try {
                         proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
@@ -870,8 +873,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 }
             };
         }
-
-
     }
 
     /**

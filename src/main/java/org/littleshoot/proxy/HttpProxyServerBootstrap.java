@@ -6,6 +6,8 @@ import org.littleshoot.proxy.ratelimit.RateLimiter;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 
+import io.netty.util.concurrent.EventExecutorGroup;
+
 /**
  * Configures and starts an {@link HttpProxyServer}. The HttpProxyServer is
  * built using {@link #start()}. Sensible defaults are available for all
@@ -256,7 +258,7 @@ public interface HttpProxyServerBootstrap {
      * @return proxy server bootstrap
      */
     HttpProxyServerBootstrap withProcessingExecutorService(
-        ExecutorService executor);
+        EventExecutorGroup executor);
 
     /**
      * <p>

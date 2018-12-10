@@ -16,6 +16,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.GlobalStateHandler;
@@ -52,7 +53,6 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -121,7 +121,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ExceptionHandler proxyToServerExHandler;
     private final RequestTracer requestTracer;
     private final GlobalStateHandler globalStateHandler;
-    private final ExecutorService processingExecutorService;
+    private final EventExecutorGroup processingEventExecutorGroup;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
@@ -260,7 +260,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             ExceptionHandler proxyToServerExHandler,
             RequestTracer requestTracer,
             GlobalStateHandler globalStateHandler,
-            ExecutorService processingExecutorService,
+            EventExecutorGroup processingEventExecutorGroup,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
@@ -289,7 +289,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.proxyToServerExHandler = proxyToServerExHandler;
         this.requestTracer = requestTracer;
         this.globalStateHandler = globalStateHandler;
-        this.processingExecutorService = processingExecutorService;
+        this.processingEventExecutorGroup = processingEventExecutorGroup;
         this.filtersSource = filtersSource;
         this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
         this.transparent = transparent;
@@ -334,7 +334,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
      * @return
      */
     private GlobalTrafficShapingHandler createGlobalTrafficShapingHandler(TransportProtocol transportProtocol, long readThrottleBytesPerSecond, long writeThrottleBytesPerSecond) {
-        EventLoopGroup proxyToServerEventLoop = this.getProxyToServerWorkerFor(transportProtocol);
+        EventExecutorGroup proxyToServerEventLoop = this.getProxyToServerWorkerFor(transportProtocol);
         return new GlobalTrafficShapingHandler(proxyToServerEventLoop,
                 writeThrottleBytesPerSecond,
                 readThrottleBytesPerSecond,
@@ -434,7 +434,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     proxyToServerExHandler,
                     requestTracer,
                     globalStateHandler,
-                    processingExecutorService,
+                    processingEventExecutorGroup,
                     filtersSource,
                     unrecoverableFailureHttpResponseComposer,
                     transparent,
@@ -482,10 +482,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
             serverGroup.unregisterProxyServer(this, graceful);
 
-            processingExecutorService.shutdown();
+            processingEventExecutorGroup.shutdown();
 
             try {
-                processingExecutorService.awaitTermination(10, TimeUnit.SECONDS);
+                processingEventExecutorGroup.awaitTermination(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 // ignore for now
             }
@@ -634,8 +634,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return globalStateHandler;
     }
 
-    protected ExecutorService getProcessingExecutor() {
-        return processingExecutorService;
+    protected EventExecutorGroup getProcessingExecutor() {
+        return processingEventExecutorGroup;
     }
 
     protected RequestTracer getRequestTracer() {
@@ -688,7 +688,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private ExceptionHandler proxyToServerExHandler = null;
         private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
-        private ExecutorService processingExecutorService = null;
+        private EventExecutorGroup processingEventExecutorGroup = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -725,7 +725,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 ExceptionHandler proxyToServerExHandler,
                 RequestTracer requestTracer,
                 GlobalStateHandler globalStateHandler,
-                ExecutorService processingExecutorService,
+                EventExecutorGroup processingEventExecutorGroup,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -753,7 +753,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.proxyToServerExHandler = proxyToServerExHandler;
             this.requestTracer = requestTracer;
             this.globalStateHandler = globalStateHandler;
-            this.processingExecutorService = processingExecutorService;
+            this.processingEventExecutorGroup = processingEventExecutorGroup;
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             this.transparent = transparent;
@@ -918,8 +918,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         @Override
         public HttpProxyServerBootstrap withProcessingExecutorService(
-            ExecutorService processingExecutorService) {
-            this.processingExecutorService = processingExecutorService;
+            EventExecutorGroup processingEventExecutorGroup) {
+            this.processingEventExecutorGroup = processingEventExecutorGroup;
             return this;
         }
 
@@ -1041,15 +1041,15 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads, clientToProxyWorkerThreads, proxyToServerWorkerThreads);
             }
 
-            if (processingExecutorService == null) {
-                this.processingExecutorService = new DefaultEventExecutorGroup(1);
+            if (processingEventExecutorGroup == null) {
+                this.processingEventExecutorGroup = new DefaultEventExecutorGroup(8);
             }
 
             return new DefaultHttpProxyServer(serverGroup,
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler, processingExecutorService,
+                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler, processingEventExecutorGroup,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
