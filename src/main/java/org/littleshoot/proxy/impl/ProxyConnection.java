@@ -840,6 +840,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Sharable
     protected abstract class BytesWrittenMonitor extends
             ChannelOutboundHandlerAdapter {
+
+
         @Override
         public void write(ChannelHandlerContext ctx,
                 Object msg, ChannelPromise promise)
