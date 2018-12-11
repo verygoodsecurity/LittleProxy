@@ -7,6 +7,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
@@ -134,6 +135,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final int maxChunkSize;
     private final boolean allowRequestsToOriginServer;
     private final RateLimiter rateLimiter;
+
+    private final EventLoopGroup workerEventLoopGroup;
 
     /**
      * The alias or pseudonym for this proxy, used when adding the Via header.
@@ -322,6 +325,9 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.maxChunkSize = maxChunkSize;
         this.allowRequestsToOriginServer = allowRequestsToOriginServer;
         this.rateLimiter = rateLimiter;
+
+//        this.workerEventLoopGroup = serverGroup.getClientToProxyWorkerPoolForTransport(transportProtocol);
+        this.workerEventLoopGroup = new DefaultEventLoopGroup(20);
     }
 
     /**
@@ -636,6 +642,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
     protected EventExecutorGroup getProcessingExecutor() {
         return processingEventExecutorGroup;
+    }
+
+    protected EventExecutorGroup getWorkerEventLoop() {
+        return workerEventLoopGroup;
     }
 
     protected RequestTracer getRequestTracer() {

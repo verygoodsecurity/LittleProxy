@@ -422,8 +422,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
      */
     protected void aggregateContentForFiltering(ChannelPipeline pipeline,
             int numberOfBytesToBuffer, EventLoopGroup processingEventLoop) {
-        pipeline.addLast(processingEventLoop, "inflater", new HttpContentDecompressor());
-        pipeline.addLast(processingEventLoop, "aggregator", new HttpObjectAggregator(
+        pipeline.addLast( "inflater", new HttpContentDecompressor());
+        pipeline.addLast( "aggregator", new HttpObjectAggregator(
                 numberOfBytesToBuffer));
     }
 
@@ -778,84 +778,24 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
     }
 
-    @Sharable
-    protected class InboundGlobalStateHandler extends
-        ChannelInboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        InboundGlobalStateHandler(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            try {
-                proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
-                super.channelRead(ctx, msg);
-            } catch (Throwable e) {
-                // release on error
-                if (msg instanceof ReferenceCounted) {
-                    ((ReferenceCounted)msg).release();
-                }
-                throw e;
-            } finally {
-                proxyServer.getGlobalStateHandler().clear();
-            }
-        }
-    }
-
-    @Sharable
-    protected class OutboundGlobalStateHandler extends
-        ChannelOutboundHandlerAdapter {
-
-        private final ProxyConnection<HttpRequest> clientToProxyConnection;
-
-        OutboundGlobalStateHandler(ProxyConnection<HttpRequest> clientToProxyConnection) {
-            this.clientToProxyConnection = clientToProxyConnection;
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise) throws Exception {
-            try {
-                proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
-                super.write(ctx, msg, promise);
-            } catch (Throwable e) {
-                // release on error
-                if (msg instanceof ReferenceCounted) {
-                    ((ReferenceCounted)msg).release();
-                }
-                throw e;
-            }  finally {
-                proxyServer.getGlobalStateHandler().clear();
-            }
-        }
-    }
-
     public class ProcessingEvenLoop extends DefaultEventLoop {
 
         private final Channel channel;
 
-        private volatile EventExecutor eventLoop;
+        private final EventExecutor eventLoop;
 
         ProcessingEvenLoop(Channel channel) {
             this.channel = channel;
+            this.eventLoop = proxyServer.getWorkerEventLoop().next();
         }
 
         @Override
         public void execute(Runnable task) {
-            if (eventLoop == null) {
-                eventLoop = proxyServer.getProcessingExecutor().next();
-            }
             eventLoop.execute(runTask(task));
         }
 
         @Override
         public boolean inEventLoop() {
-            if (eventLoop == null) {
-                return false;
-            }
             return eventLoop.inEventLoop();
         }
 
@@ -864,9 +804,12 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 if (proxyServer.getGlobalStateHandler() != null) {
                     try {
                         proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
-                        task.run();
                     } finally {
-                        proxyServer.getGlobalStateHandler().clear();
+                        try {
+                            task.run();
+                        } finally {
+                            proxyServer.getGlobalStateHandler().clear();
+                        }
                     }
                 } else {
                     task.run();

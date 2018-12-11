@@ -800,16 +800,16 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         LOG.debug("Configuring ChannelPipeline");
 
         if (proxyServer.getRequestTracer() != null) {
-            pipeline.addLast(processingEventLoopGroup, "requestTracerHandler", new RequestTracerHandler(this));
+            pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
 
         pipeline.addLast(processingEventLoopGroup, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(processingEventLoopGroup, "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast(processingEventLoopGroup, "encoder", new HttpResponseEncoder());
+        pipeline.addLast( "encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
         // respectively.
-        pipeline.addLast(processingEventLoopGroup, "decoder", new HttpRequestDecoder(
+        pipeline.addLast( "decoder", new HttpRequestDecoder(
                 proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
@@ -824,7 +824,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         pipeline.addLast(processingEventLoopGroup, "requestReadMonitor", requestReadMonitor);
         pipeline.addLast(processingEventLoopGroup, "responseWrittenMonitor", responseWrittenMonitor);
 
-        pipeline.addLast(processingEventLoopGroup,
+        pipeline.addLast(
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
