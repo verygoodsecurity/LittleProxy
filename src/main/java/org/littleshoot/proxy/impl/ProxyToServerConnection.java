@@ -903,7 +903,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         }
 
         pipeline.addLast(processingEventLoopGroup,  "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast(processingEventLoopGroup,  "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(  "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast( "encoder", new HttpRequestEncoder());
         pipeline.addLast( "decoder", new HeadAwareHttpResponseDecoder(
@@ -919,7 +919,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         }
 
         pipeline.addLast(processingEventLoopGroup,  "responseReadMonitor", responseReadMonitor);
-        pipeline.addLast(processingEventLoopGroup, "requestWrittenMonitor", requestWrittenMonitor);
+        pipeline.addLast( "requestWrittenMonitor", requestWrittenMonitor);
 
         // Set idle timeout
         pipeline.addLast(
