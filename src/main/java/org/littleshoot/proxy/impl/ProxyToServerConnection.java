@@ -829,7 +829,10 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * @throws UnknownHostException when {@link #setupConnectionParameters()} is unable to resolve the hostname
      */
     private void resetConnectionForRetry() throws UnknownHostException {
-        this.channel.close();
+        if (this.channel.pipeline().get("handler") != null) {
+            this.channel.pipeline().remove("handler");
+        }
+        this.ctx = null;
         this.setupConnectionParameters();
     }
 
@@ -896,14 +899,14 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void initChannelPipeline(ChannelPipeline pipeline,
             HttpRequest httpRequest) {
 
-        final EventLoopGroup processingEventLoopGroup = clientConnection.processingEventLoopGroup;
+        final EventLoopGroup processingEventLoopGroup = new ProcessingEvenLoop(clientConnection.channel);
 
         if (trafficHandler != null) {
             pipeline.addLast( "global-traffic-shaping", trafficHandler);
         }
 
         pipeline.addLast(processingEventLoopGroup,  "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast(  "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(processingEventLoopGroup,   "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast( "encoder", new HttpRequestEncoder());
         pipeline.addLast( "decoder", new HeadAwareHttpResponseDecoder(
@@ -919,7 +922,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         }
 
         pipeline.addLast(processingEventLoopGroup,  "responseReadMonitor", responseReadMonitor);
-        pipeline.addLast( "requestWrittenMonitor", requestWrittenMonitor);
+        pipeline.addLast(processingEventLoopGroup,   "requestWrittenMonitor", requestWrittenMonitor);
 
         // Set idle timeout
         pipeline.addLast(

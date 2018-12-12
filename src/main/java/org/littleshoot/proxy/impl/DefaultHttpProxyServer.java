@@ -13,6 +13,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.ChannelGroupFuture;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
@@ -327,7 +328,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.rateLimiter = rateLimiter;
 
 //        this.workerEventLoopGroup = serverGroup.getClientToProxyWorkerPoolForTransport(transportProtocol);
-        this.workerEventLoopGroup = new DefaultEventLoopGroup(20);
+        this.workerEventLoopGroup = new NioEventLoopGroup(20);
     }
 
     /**
