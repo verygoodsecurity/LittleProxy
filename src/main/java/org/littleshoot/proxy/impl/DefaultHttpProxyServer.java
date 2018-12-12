@@ -137,8 +137,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final boolean allowRequestsToOriginServer;
     private final RateLimiter rateLimiter;
 
-    private final EventLoopGroup workerEventLoopGroup;
-
     /**
      * The alias or pseudonym for this proxy, used when adding the Via header.
      */
@@ -326,9 +324,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.maxChunkSize = maxChunkSize;
         this.allowRequestsToOriginServer = allowRequestsToOriginServer;
         this.rateLimiter = rateLimiter;
-
-//        this.workerEventLoopGroup = serverGroup.getClientToProxyWorkerPoolForTransport(transportProtocol);
-        this.workerEventLoopGroup = new NioEventLoopGroup(20);
     }
 
     /**
@@ -643,10 +638,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
     protected EventExecutorGroup getProcessingExecutor() {
         return processingEventExecutorGroup;
-    }
-
-    protected EventExecutorGroup getWorkerEventLoop() {
-        return workerEventLoopGroup;
     }
 
     protected RequestTracer getRequestTracer() {

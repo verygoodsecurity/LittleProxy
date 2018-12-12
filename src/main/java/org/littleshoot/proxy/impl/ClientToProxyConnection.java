@@ -152,7 +152,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         this.channel = channel;
 
-        processingEventLoopGroup = new ProcessingEvenLoop(this.channel);
+        processingEventLoopGroup = new ProcessingEvenLoop(this.channel, this.channel.eventLoop());
 
         initChannelPipeline(channel.pipeline());
 

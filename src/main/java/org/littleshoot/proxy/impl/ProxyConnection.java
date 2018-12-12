@@ -784,9 +784,9 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         private final EventExecutor eventLoop;
 
-        ProcessingEvenLoop(Channel channel) {
+        ProcessingEvenLoop(Channel channel, EventExecutor eventExecutor) {
             this.channel = channel;
-            this.eventLoop = proxyServer.getWorkerEventLoop().next();
+            this.eventLoop = eventExecutor;
         }
 
         @Override
