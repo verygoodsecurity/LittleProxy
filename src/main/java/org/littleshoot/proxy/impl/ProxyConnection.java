@@ -791,12 +791,16 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         @Override
         public void execute(Runnable task) {
-            eventLoop.execute(runTask(task));
+            if (eventLoop.inEventLoop()) {
+                runTask(task).run();
+            } else {
+                eventLoop.execute(runTask(task));
+            }
         }
 
         @Override
         public boolean inEventLoop() {
-            return eventLoop.inEventLoop();
+            return false;
         }
 
         private Runnable runTask(Runnable task) {
