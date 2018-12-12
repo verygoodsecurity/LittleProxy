@@ -336,7 +336,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
      * @return
      */
     private GlobalTrafficShapingHandler createGlobalTrafficShapingHandler(TransportProtocol transportProtocol, long readThrottleBytesPerSecond, long writeThrottleBytesPerSecond) {
-        EventExecutorGroup proxyToServerEventLoop = this.getProxyToServerWorkerFor(transportProtocol);
+        EventLoopGroup proxyToServerEventLoop = this.getProxyToServerWorkerFor(transportProtocol);
         return new GlobalTrafficShapingHandler(proxyToServerEventLoop,
                 writeThrottleBytesPerSecond,
                 readThrottleBytesPerSecond,
@@ -913,7 +913,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
-        public HttpProxyServerBootstrap withProcessingExecutorService(
+        public HttpProxyServerBootstrap withProcessingEventLoopGroup(
             EventExecutorGroup processingEventExecutorGroup) {
             this.processingEventExecutorGroup = processingEventExecutorGroup;
             return this;

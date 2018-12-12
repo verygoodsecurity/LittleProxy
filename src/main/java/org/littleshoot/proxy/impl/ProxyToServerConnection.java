@@ -906,11 +906,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             pipeline.addLast( "global-traffic-shaping", trafficHandler);
         }
 
-        pipeline.addLast(processingEventLoopGroup,  "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast(processingEventLoopGroup,   "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(processingEventLoopGroup, "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(processingEventLoopGroup, "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast( "encoder", new HttpRequestEncoder());
-        pipeline.addLast( "decoder", new HeadAwareHttpResponseDecoder(
+        pipeline.addLast("encoder", new HttpRequestEncoder());
+        pipeline.addLast("decoder", new HeadAwareHttpResponseDecoder(
         		proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
@@ -919,7 +919,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         int numberOfBytesToBuffer = proxyServer.getFiltersSource()
                 .getMaximumResponseBufferSizeInBytes();
         if (numberOfBytesToBuffer > 0) {
-            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
+            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
         }
 
         pipeline.addLast(processingEventLoopGroup,  "responseReadMonitor", responseReadMonitor);

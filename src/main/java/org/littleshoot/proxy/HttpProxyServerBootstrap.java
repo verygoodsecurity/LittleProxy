@@ -4,7 +4,6 @@ import org.littleshoot.proxy.impl.ThreadPoolConfiguration;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
 
 import io.netty.util.concurrent.EventExecutorGroup;
 
@@ -247,7 +246,7 @@ public interface HttpProxyServerBootstrap {
 
     /**
      * <p>
-     * Specify an {@link ExecutorService} to handler message processing
+     * Specify an {@link EventExecutorGroup} to handler message processing
      * </p>
      *
      * <p>
@@ -257,7 +256,7 @@ public interface HttpProxyServerBootstrap {
      * @param executor
      * @return proxy server bootstrap
      */
-    HttpProxyServerBootstrap withProcessingExecutorService(
+    HttpProxyServerBootstrap withProcessingEventLoopGroup(
         EventExecutorGroup executor);
 
     /**

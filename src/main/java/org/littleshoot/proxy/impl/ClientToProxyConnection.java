@@ -804,10 +804,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         pipeline.addLast(processingEventLoopGroup, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(processingEventLoopGroup, "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast( "encoder", new HttpResponseEncoder());
+        pipeline.addLast("encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
         // respectively.
-        pipeline.addLast( "decoder", new HttpRequestDecoder(
+        pipeline.addLast("decoder", new HttpRequestDecoder(
                 proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
@@ -816,7 +816,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         int numberOfBytesToBuffer = proxyServer.getFiltersSource()
                 .getMaximumRequestBufferSizeInBytes();
         if (numberOfBytesToBuffer > 0) {
-            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
+            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
         }
 
         pipeline.addLast(processingEventLoopGroup, "requestReadMonitor", requestReadMonitor);

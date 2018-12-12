@@ -421,7 +421,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param numberOfBytesToBuffer
      */
     protected void aggregateContentForFiltering(ChannelPipeline pipeline,
-            int numberOfBytesToBuffer, EventLoopGroup processingEventLoop) {
+            int numberOfBytesToBuffer) {
         pipeline.addLast( "inflater", new HttpContentDecompressor());
         pipeline.addLast( "aggregator", new HttpObjectAggregator(
                 numberOfBytesToBuffer));
