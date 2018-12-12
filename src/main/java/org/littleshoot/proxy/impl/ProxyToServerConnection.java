@@ -903,7 +903,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             new ProcessingEvenLoop(clientConnection.channel, this.channel.eventLoop());
 
         if (trafficHandler != null) {
-            pipeline.addLast( "global-traffic-shaping", trafficHandler);
+            pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
 
         pipeline.addLast(processingEventLoopGroup, "bytesReadMonitor", bytesReadMonitor);
