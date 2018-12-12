@@ -484,13 +484,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
             serverGroup.unregisterProxyServer(this, graceful);
 
-            processingEventExecutorGroup.shutdown();
-
-            try {
-                processingEventExecutorGroup.awaitTermination(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                // ignore for now
-            }
+            processingEventExecutorGroup.shutdownGracefully();
 
             // remove the shutdown hook that was added when the proxy was started, since it has now been stopped
             try {
