@@ -573,7 +573,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @return
      */
     protected HttpFilters getHttpFiltersFromProxyServer(HttpRequest httpRequest) {
-        return proxyServer.getFiltersSource().filterRequest(httpRequest, ctx);
+        return proxyServer.getFiltersSource().filterRequest(httpRequest, channel);
     }
 
     ProxyConnectionLogger getLOG() {
