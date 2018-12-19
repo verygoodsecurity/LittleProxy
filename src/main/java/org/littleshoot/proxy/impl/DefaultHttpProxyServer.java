@@ -1026,16 +1026,16 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private DefaultHttpProxyServer build() {
             final ServerGroup serverGroup;
 
+            if (processingEventExecutorGroup == null) {
+              this.processingEventExecutorGroup = new DefaultEventLoopGroup(8);
+            }
+
             if (this.serverGroup != null) {
                 serverGroup = this.serverGroup;
             }
             else {
                 serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads,
                     clientToProxyWorkerThreads, proxyToServerWorkerThreads, processingEventExecutorGroup);
-            }
-
-            if (processingEventExecutorGroup == null) {
-                this.processingEventExecutorGroup = new DefaultEventLoopGroup(8);
             }
 
             return new DefaultHttpProxyServer(serverGroup,
