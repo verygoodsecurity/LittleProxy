@@ -5,6 +5,7 @@ import org.littleshoot.proxy.ratelimit.RateLimiter;
 
 import java.net.InetSocketAddress;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
@@ -257,7 +258,7 @@ public interface HttpProxyServerBootstrap {
      * @return proxy server bootstrap
      */
     HttpProxyServerBootstrap withProcessingEventLoopGroup(
-        EventExecutorGroup executor);
+        EventLoopGroup executor);
 
     /**
      * <p>

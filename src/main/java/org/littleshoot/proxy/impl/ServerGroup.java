@@ -60,6 +60,8 @@ public class ServerGroup {
     private final int incomingWorkerThreads;
     private final int outgoingWorkerThreads;
 
+    private final EventLoopGroup processingEventLoopGroup;
+
     /**
      * List of all servers registered to use this ServerGroup. Any access to this list should be synchronized using the
      * {@link #SERVER_REGISTRATION_LOCK}.
@@ -104,12 +106,14 @@ public class ServerGroup {
      * @param incomingWorkerThreads number of client-to-proxy worker threads per protocol
      * @param outgoingWorkerThreads number of proxy-to-server worker threads per protocol
      */
-    public ServerGroup(String name, int incomingAcceptorThreads, int incomingWorkerThreads, int outgoingWorkerThreads) {
+    public ServerGroup(String name, int incomingAcceptorThreads, int incomingWorkerThreads,
+                       int outgoingWorkerThreads, EventLoopGroup processingEventLoopGroup) {
         this.name = name;
         this.serverGroupId = serverGroupCount.getAndIncrement();
         this.incomingAcceptorThreads = incomingAcceptorThreads;
         this.incomingWorkerThreads = incomingWorkerThreads;
         this.outgoingWorkerThreads = outgoingWorkerThreads;
+        this.processingEventLoopGroup = processingEventLoopGroup;
     }
 
     /**
@@ -146,7 +150,8 @@ public class ServerGroup {
                             incomingWorkerThreads,
                             outgoingWorkerThreads,
                             name,
-                            serverGroupId);
+                            serverGroupId,
+                            processingEventLoopGroup);
                     protocolThreadPools.put(protocol, threadPools);
                 }
             }

@@ -7,6 +7,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
@@ -15,7 +16,6 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.littleshoot.proxy.ActivityTracker;
@@ -121,7 +121,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ExceptionHandler proxyToServerExHandler;
     private final RequestTracer requestTracer;
     private final GlobalStateHandler globalStateHandler;
-    private final EventExecutorGroup processingEventExecutorGroup;
+    private final EventLoopGroup processingEventExecutorGroup;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
@@ -260,7 +260,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             ExceptionHandler proxyToServerExHandler,
             RequestTracer requestTracer,
             GlobalStateHandler globalStateHandler,
-            EventExecutorGroup processingEventExecutorGroup,
+            EventLoopGroup processingEventExecutorGroup,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
@@ -482,8 +482,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
             serverGroup.unregisterProxyServer(this, graceful);
 
-            processingEventExecutorGroup.shutdownGracefully();
-
             // remove the shutdown hook that was added when the proxy was started, since it has now been stopped
             try {
                 Runtime.getRuntime().removeShutdownHook(jvmShutdownHook);
@@ -682,7 +680,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private ExceptionHandler proxyToServerExHandler = null;
         private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
-        private EventExecutorGroup processingEventExecutorGroup = null;
+        private EventLoopGroup processingEventExecutorGroup = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -719,7 +717,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 ExceptionHandler proxyToServerExHandler,
                 RequestTracer requestTracer,
                 GlobalStateHandler globalStateHandler,
-                EventExecutorGroup processingEventExecutorGroup,
+                EventLoopGroup processingEventExecutorGroup,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -912,7 +910,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
         @Override
         public HttpProxyServerBootstrap withProcessingEventLoopGroup(
-            EventExecutorGroup processingEventExecutorGroup) {
+            EventLoopGroup processingEventExecutorGroup) {
             this.processingEventExecutorGroup = processingEventExecutorGroup;
             return this;
         }
@@ -1032,11 +1030,12 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 serverGroup = this.serverGroup;
             }
             else {
-                serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads, clientToProxyWorkerThreads, proxyToServerWorkerThreads);
+                serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads,
+                    clientToProxyWorkerThreads, proxyToServerWorkerThreads, processingEventExecutorGroup);
             }
 
             if (processingEventExecutorGroup == null) {
-                this.processingEventExecutorGroup = new DefaultEventExecutorGroup(8);
+                this.processingEventExecutorGroup = new DefaultEventLoopGroup(8);
             }
 
             return new DefaultHttpProxyServer(serverGroup,
