@@ -585,7 +585,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        read(msg);
+        new Thread(() -> read(msg)).start();
     }
 
     @Override
@@ -759,13 +759,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             } catch (Throwable t) {
                 LOG.warn("Unable to start tracing request", t);
             } finally {
-                new Thread(() -> {
-                    try {
-                        super.channelRead(ctx, msg);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }).start();
+                super.channelRead(ctx, msg);
             }
         }
 
@@ -777,40 +771,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
             } finally {
                 try {
                     proxyServer.getRequestTracer().finish(clientToProxyConnection.channel);
-                } catch (Throwable t) {
-                    LOG.warn("Unable to finish request tracing", t);
-                }
-            }
-        }
-    }
-
-
-    @Sharable
-    protected class RequestTracerHandler2 extends ChannelDuplexHandler {
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            try {
-            } catch (Throwable t) {
-                LOG.warn("Unable to start tracing request", t);
-            } finally {
-                new Thread(() -> {
-                    try {
-                        super.channelRead(ctx, msg);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }).start();
-            }
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise) throws Exception {
-            try {
-                super.write(ctx, msg, promise);
-            } finally {
-                try {
                 } catch (Throwable t) {
                     LOG.warn("Unable to finish request tracing", t);
                 }

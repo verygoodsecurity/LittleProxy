@@ -795,7 +795,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         if (proxyServer.getRequestTracer() != null) {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
-        pipeline.addLast("requestTracerHandler2", new RequestTracerHandler2());
 
         if (proxyServer.getGlobalStateHandler() != null) {
             pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
