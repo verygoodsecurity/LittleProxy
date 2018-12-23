@@ -585,7 +585,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        read(msg);
+        new Thread(() -> read(msg)).start();
     }
 
     @Override
