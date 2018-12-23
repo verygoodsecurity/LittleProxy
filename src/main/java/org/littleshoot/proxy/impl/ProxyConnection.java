@@ -585,7 +585,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        new Thread(() -> read(msg)).start();
+        read(msg);
     }
 
     @Override
@@ -759,7 +759,13 @@ abstract class ProxyConnection<I extends HttpObject> extends
             } catch (Throwable t) {
                 LOG.warn("Unable to start tracing request", t);
             } finally {
-                super.channelRead(ctx, msg);
+                new Thread(() -> {
+                    try {
+                        super.channelRead(ctx, msg);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
             }
         }
 
