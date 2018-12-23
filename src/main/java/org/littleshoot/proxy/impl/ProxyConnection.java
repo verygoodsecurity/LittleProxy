@@ -586,7 +586,10 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        ((ReferenceCounted) msg).retain();
+        if (msg instanceof ReferenceCounted) {
+            LOG.debug("Retaining reference counted message");
+            ((ReferenceCounted) msg).retain();
+        }
         new Thread(() -> {
             try {
                 read(msg);
