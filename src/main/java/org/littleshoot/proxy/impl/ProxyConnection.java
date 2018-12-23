@@ -6,6 +6,7 @@ import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -585,7 +586,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        new Thread(() -> read(msg)).start();
+        ((ReferenceCounted) msg).retain();
+        new Thread(() -> {
+            try {
+                read(msg);
+            } finally {
+                ReferenceCountUtil.release(msg);
+            }
+        }).start();
     }
 
     @Override
