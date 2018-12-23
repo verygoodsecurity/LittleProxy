@@ -119,7 +119,18 @@ abstract class ProxyConnection<I extends HttpObject> extends
             readRaw((ByteBuf) msg);
         } else {
             // If not tunneling, then we are always dealing with HttpObjects.
-            readHTTP((HttpObject) msg);
+
+            if (msg instanceof ReferenceCounted) {
+                LOG.debug("Retaining reference counted message");
+                ((ReferenceCounted) msg).retain();
+            }
+            new Thread(() -> {
+                try {
+                    readHTTP((HttpObject) msg);
+                } finally {
+                    ReferenceCountUtil.release(msg);
+                }
+            }).start();
         }
     }
 
@@ -586,17 +597,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        if (msg instanceof ReferenceCounted) {
-            LOG.debug("Retaining reference counted message");
-            ((ReferenceCounted) msg).retain();
-        }
-        new Thread(() -> {
-            try {
-                read(msg);
-            } finally {
-                ReferenceCountUtil.release(msg);
-            }
-        }).start();
+        read(msg);
     }
 
     @Override
