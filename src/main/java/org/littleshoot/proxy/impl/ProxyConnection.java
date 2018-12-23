@@ -124,13 +124,23 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 LOG.debug("Retaining reference counted message");
                 ((ReferenceCounted) msg).retain();
             }
-            new Thread(() -> {
+            Thread t = new Thread(() -> {
                 try {
                     readHTTP((HttpObject) msg);
                 } finally {
                     ReferenceCountUtil.release(msg);
                 }
-            }).start();
+            });
+
+            t.start();
+
+          try {
+            t.join();
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+
+
         }
     }
 
