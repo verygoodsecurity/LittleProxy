@@ -827,7 +827,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        pipeline.addLast(new ProcessingEvenLoop(this.channel, proxyServer.getProcessingExecutor().next()), "handler", this);
+        pipeline.addLast(processingEventLoopGroup, "handler", this);
 
     }
 

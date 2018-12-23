@@ -13,6 +13,9 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.littleshoot.proxy.HttpFilters;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 import javax.net.ssl.SSLEngine;
 
 import static org.littleshoot.proxy.impl.ConnectionState.*;
@@ -80,6 +83,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * If using encryption, this holds our {@link SSLEngine}.
      */
     protected volatile SSLEngine sslEngine;
+
+    private final Executor executor = Executors.newCachedThreadPool();
 
     /**
      * Construct a new ProxyConnection.
@@ -586,7 +591,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        read(msg);
+        executor.execute(() -> runTask(() -> read(msg)).run());
     }
 
     @Override
@@ -803,23 +808,25 @@ abstract class ProxyConnection<I extends HttpObject> extends
             return false;
         }
 
-        private Runnable runTask(Runnable task) {
-            return () -> {
-                if (proxyServer.getGlobalStateHandler() != null) {
+
+    }
+
+    private Runnable runTask(Runnable task) {
+        return () -> {
+            if (proxyServer.getGlobalStateHandler() != null) {
+                try {
+                    proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
+                } finally {
                     try {
-                        proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
+                        task.run();
                     } finally {
-                        try {
-                            task.run();
-                        } finally {
-                            proxyServer.getGlobalStateHandler().clear();
-                        }
+                        proxyServer.getGlobalStateHandler().clear();
                     }
-                } else {
-                    task.run();
                 }
-            };
-        }
+            } else {
+                task.run();
+            }
+        };
     }
 
     /**
