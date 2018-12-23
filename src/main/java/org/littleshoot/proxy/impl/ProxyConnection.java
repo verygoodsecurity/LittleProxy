@@ -140,7 +140,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param httpObject
      */
     @SuppressWarnings("unchecked")
-    private void readHTTP(HttpObject httpObject) {
+    private synchronized void readHTTP(HttpObject httpObject) {
         ConnectionState nextState = getCurrentState();
         switch (getCurrentState()) {
         case AWAITING_INITIAL:
