@@ -591,7 +591,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        executor.execute(() -> runTask(() -> read(msg)).run());
+        read(msg);
     }
 
     @Override
@@ -797,9 +797,9 @@ abstract class ProxyConnection<I extends HttpObject> extends
         @Override
         public void execute(Runnable task) {
             if (eventLoop.inEventLoop()) {
-                runTask(task).run();
+                wrapTask(task).run();
             } else {
-                eventLoop.execute(runTask(task));
+                eventLoop.execute(wrapTask(task));
             }
         }
 
@@ -808,10 +808,45 @@ abstract class ProxyConnection<I extends HttpObject> extends
             return false;
         }
 
-
     }
 
-    private Runnable runTask(Runnable task) {
+    class CachedEventLoop extends DefaultEventLoop {
+
+        @Override
+        public boolean inEventLoop() {
+            return true;
+        }
+
+        @Override
+        protected void run() {
+            for (; ; ) {
+                Runnable firstTask = takeTask();
+                if (firstTask != null) {
+                    executor.execute(() -> {
+                        runTask(wrapTask(firstTask));
+                        for (; ; ) {
+                            Runnable task = takeTask();
+                            if (task != null) {
+                                runTask(wrapTask(task));
+                            } else {
+                                break;
+                            }
+                        }
+                    });
+                }
+                if (confirmShutdown()) {
+                    break;
+                }
+            }
+        }
+
+        private void runTask(Runnable task) {
+            task.run();
+            updateLastExecutionTime();
+        }
+    }
+
+    private Runnable wrapTask(Runnable task) {
         return () -> {
             if (proxyServer.getGlobalStateHandler() != null) {
                 try {
