@@ -119,28 +119,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             readRaw((ByteBuf) msg);
         } else {
             // If not tunneling, then we are always dealing with HttpObjects.
-
-            if (msg instanceof ReferenceCounted) {
-                LOG.debug("Retaining reference counted message");
-                ((ReferenceCounted) msg).retain();
-            }
-            Thread t = new Thread(() -> {
-                try {
-                    readHTTP((HttpObject) msg);
-                } finally {
-                    ReferenceCountUtil.release(msg);
-                }
-            });
-
-            t.start();
-
-          try {
-            t.join();
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-
-
+            readHTTP((HttpObject) msg);
         }
     }
 
@@ -150,7 +129,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param httpObject
      */
     @SuppressWarnings("unchecked")
-    private synchronized void readHTTP(HttpObject httpObject) {
+    private void readHTTP(HttpObject httpObject) {
         ConnectionState nextState = getCurrentState();
         switch (getCurrentState()) {
         case AWAITING_INITIAL:
@@ -601,13 +580,26 @@ abstract class ProxyConnection<I extends HttpObject> extends
         return LOG;
     }
 
+    private final DefaultEventLoop taskQueue = new DefaultEventLoop();
+
     /***************************************************************************
      * Adapting the Netty API
      **************************************************************************/
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        read(msg);
+        if (msg instanceof ReferenceCounted) {
+            LOG.debug("Retaining reference counted message");
+            ((ReferenceCounted) msg).retain();
+        }
+        taskQueue.execute(() -> {
+            try {
+                read(msg);
+            } finally {
+                ReferenceCountUtil.release(msg);
+            }
+        });
+
     }
 
     @Override
