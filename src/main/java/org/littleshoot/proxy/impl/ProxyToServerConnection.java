@@ -11,6 +11,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -643,6 +644,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 protected void initChannel(Channel ch) throws Exception {
+                    serverConnection.channel = ch;
                     initChannelPipeline(ch.pipeline(), initialRequest);
                 };
             });
@@ -827,11 +829,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * @throws UnknownHostException when {@link #setupConnectionParameters()} is unable to resolve the hostname
      */
     private void resetConnectionForRetry() throws UnknownHostException {
-        // Remove ourselves as handler on the old context
-        this.ctx.pipeline().remove(this);
-        this.ctx.close();
-        this.ctx = null;
-
+        this.channel.close();
         this.setupConnectionParameters();
     }
 
@@ -898,19 +896,18 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void initChannelPipeline(ChannelPipeline pipeline,
             HttpRequest httpRequest) {
 
-        if (proxyServer.getGlobalStateHandler() != null) {
-            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(clientConnection));
-        }
+        final EventLoopGroup processingEventLoopGroup = clientConnection.processingEventLoopGroup;
+        processingEventLoopGroup.register(channel);
 
         if (trafficHandler != null) {
-            pipeline.addLast("global-traffic-shaping", trafficHandler);
+            pipeline.addLast( "global-traffic-shaping", trafficHandler);
         }
 
-        pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(  "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(  "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast("encoder", new HttpRequestEncoder());
-        pipeline.addLast("decoder", new HeadAwareHttpResponseDecoder(
+        pipeline.addLast( "encoder", new HttpRequestEncoder());
+        pipeline.addLast( "decoder", new HeadAwareHttpResponseDecoder(
         		proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
@@ -919,11 +916,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         int numberOfBytesToBuffer = proxyServer.getFiltersSource()
                 .getMaximumResponseBufferSizeInBytes();
         if (numberOfBytesToBuffer > 0) {
-            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
+            aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
         }
 
-        pipeline.addLast("responseReadMonitor", responseReadMonitor);
-        pipeline.addLast("requestWrittenMonitor", requestWrittenMonitor);
+        pipeline.addLast(  "responseReadMonitor", responseReadMonitor);
+        pipeline.addLast( "requestWrittenMonitor", requestWrittenMonitor);
 
         // Set idle timeout
         pipeline.addLast(
@@ -931,11 +928,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        if (proxyServer.getGlobalStateHandler() != null) {
-            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(clientConnection));
-        }
-
-        pipeline.addLast("handler", this);
+        pipeline.addLast(processingEventLoopGroup,  "handler", this);
     }
 
     /**

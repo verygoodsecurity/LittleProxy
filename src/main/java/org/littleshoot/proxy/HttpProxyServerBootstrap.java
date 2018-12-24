@@ -4,6 +4,7 @@ import org.littleshoot.proxy.impl.ThreadPoolConfiguration;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Configures and starts an {@link HttpProxyServer}. The HttpProxyServer is
@@ -40,7 +41,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withTransportProtocol(
-            TransportProtocol transportProtocol);
+        TransportProtocol transportProtocol);
 
     /**
      * <p>
@@ -111,7 +112,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withSslEngineSource(
-            SslEngineSource sslEngineSource);
+        SslEngineSource sslEngineSource);
 
     /**
      * <p>
@@ -127,7 +128,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withAuthenticateSslClients(
-            boolean authenticateSslClients);
+        boolean authenticateSslClients);
 
     /**
      * <p>
@@ -143,7 +144,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withProxyAuthenticator(
-            ProxyAuthenticator proxyAuthenticator);
+        ProxyAuthenticator proxyAuthenticator);
 
     /**
      * <p>
@@ -159,7 +160,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withChainProxyManager(
-            ChainedProxyManager chainProxyManager);
+        ChainedProxyManager chainProxyManager);
 
     /**
      * <p>
@@ -180,7 +181,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withManInTheMiddle(
-            MitmManagerFactory mitmManager);
+        MitmManagerFactory mitmManager);
 
     /**
      * <p>
@@ -244,6 +245,21 @@ public interface HttpProxyServerBootstrap {
 
     /**
      * <p>
+     * Specify an {@link ExecutorService} to handler message processing
+     * </p>
+     *
+     * <p>
+     * Default = null
+     * </p>
+     *
+     * @param executor
+     * @return proxy server bootstrap
+     */
+    HttpProxyServerBootstrap withProcessingExecutorService(
+        ExecutorService executor);
+
+    /**
+     * <p>
      * Specify a {@link HttpFiltersSource} to use for filtering requests and/or
      * responses through this proxy.
      * </p>
@@ -256,7 +272,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withFiltersSource(
-            HttpFiltersSource filtersSource);
+        HttpFiltersSource filtersSource);
 
     /**
      * <p>
@@ -288,7 +304,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withUseDnsSec(
-            boolean useDnsSec);
+        boolean useDnsSec);
 
     /**
      * <p>
@@ -303,7 +319,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withTransparent(
-            boolean transparent);
+        boolean transparent);
 
     /**
      * <p>
@@ -319,7 +335,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withIdleConnectionTimeout(
-            int idleConnectionTimeout);
+        int idleConnectionTimeout);
 
     /**
      * <p>
@@ -335,7 +351,7 @@ public interface HttpProxyServerBootstrap {
      * @return
      */
     HttpProxyServerBootstrap withConnectTimeout(
-            int connectTimeout);
+        int connectTimeout);
 
     /**
      * Specify a custom {@link HostResolver} for resolving server addresses.

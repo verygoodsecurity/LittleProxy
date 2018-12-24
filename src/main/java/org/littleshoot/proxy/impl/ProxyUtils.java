@@ -152,7 +152,7 @@ public class ProxyUtils {
      * If an HttpObject implements the market interface LastHttpContent, it
      * represents the last chunk of a transfer.
      * 
-     * @see io.netty.handler.codec.http.LastHttpContent
+     * @see LastHttpContent
      * 
      * @param httpObject
      * @return

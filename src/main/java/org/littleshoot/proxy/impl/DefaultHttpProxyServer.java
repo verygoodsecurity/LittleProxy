@@ -51,6 +51,8 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -119,6 +121,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ExceptionHandler proxyToServerExHandler;
     private final RequestTracer requestTracer;
     private final GlobalStateHandler globalStateHandler;
+    private final ExecutorService processingExecutorService;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
@@ -257,6 +260,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             ExceptionHandler proxyToServerExHandler,
             RequestTracer requestTracer,
             GlobalStateHandler globalStateHandler,
+            ExecutorService processingExecutorService,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
@@ -285,6 +289,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.proxyToServerExHandler = proxyToServerExHandler;
         this.requestTracer = requestTracer;
         this.globalStateHandler = globalStateHandler;
+        this.processingExecutorService = processingExecutorService;
         this.filtersSource = filtersSource;
         this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
         this.transparent = transparent;
@@ -429,6 +434,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     proxyToServerExHandler,
                     requestTracer,
                     globalStateHandler,
+                    processingExecutorService,
                     filtersSource,
                     unrecoverableFailureHttpResponseComposer,
                     transparent,
@@ -475,6 +481,14 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             closeAllChannels(graceful);
 
             serverGroup.unregisterProxyServer(this, graceful);
+
+            processingExecutorService.shutdown();
+
+            try {
+                processingExecutorService.awaitTermination(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                // ignore for now
+            }
 
             // remove the shutdown hook that was added when the proxy was started, since it has now been stopped
             try {
@@ -548,10 +562,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         ChannelInitializer<Channel> initializer = new ChannelInitializer<Channel>() {
             protected void initChannel(Channel ch) throws Exception {
                 new ClientToProxyConnection(
+                        ch,
                         DefaultHttpProxyServer.this,
                         sslEngineSource,
                         authenticateSslClients,
-                        ch.pipeline(),
                         globalTrafficShapingHandler);
             };
         };
@@ -620,6 +634,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return globalStateHandler;
     }
 
+    protected ExecutorService getProcessingExecutor() {
+        return processingExecutorService;
+    }
+
     protected RequestTracer getRequestTracer() {
         return requestTracer;
     }
@@ -670,6 +688,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private ExceptionHandler proxyToServerExHandler = null;
         private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
+        private ExecutorService executor = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -706,6 +725,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 ExceptionHandler proxyToServerExHandler,
                 RequestTracer requestTracer,
                 GlobalStateHandler globalStateHandler,
+                ExecutorService executor,
                 HttpFiltersSource filtersSource,
                 FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
                 boolean transparent, int idleConnectionTimeout,
@@ -733,6 +753,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             this.proxyToServerExHandler = proxyToServerExHandler;
             this.requestTracer = requestTracer;
             this.globalStateHandler = globalStateHandler;
+            this.executor = executor;
             this.filtersSource = filtersSource;
             this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
             this.transparent = transparent;
@@ -896,6 +917,13 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
+        public HttpProxyServerBootstrap withProcessingExecutorService(
+            ExecutorService executor) {
+            this.executor = executor;
+            return this;
+        }
+
+        @Override
         public HttpProxyServerBootstrap withFiltersSource(
                 HttpFiltersSource filtersSource) {
             this.filtersSource = filtersSource;
@@ -1006,6 +1034,10 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private DefaultHttpProxyServer build() {
             final ServerGroup serverGroup;
 
+            if (executor == null) {
+                executor = Executors.newCachedThreadPool();
+            }
+
             if (this.serverGroup != null) {
                 serverGroup = this.serverGroup;
             }
@@ -1017,7 +1049,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler,
+                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler, executor,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,

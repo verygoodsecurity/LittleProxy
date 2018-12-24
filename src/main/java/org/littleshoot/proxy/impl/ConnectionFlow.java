@@ -118,16 +118,8 @@ class ConnectionFlow {
         suppressInitialRequest = suppressInitialRequest
                 || currentStep.shouldSuppressInitialRequest();
 
-        if (currentStep.shouldExecuteOnEventLoop()) {
-            connection.ctx.executor().submit(new Runnable() {
-                @Override
-                public void run() {
-                    doProcessCurrentStep(LOG);
-                }
-            });
-        } else {
-            doProcessCurrentStep(LOG);
-        }
+
+        doProcessCurrentStep(LOG);
     }
 
     /**
@@ -141,7 +133,7 @@ class ConnectionFlow {
         currentStep.execute().addListener(
                 new GenericFutureListener<Future<?>>() {
                     public void operationComplete(
-                            io.netty.util.concurrent.Future<?> future)
+                            Future<?> future)
                             throws Exception {
                         synchronized (connectLock) {
                             if (future.isSuccess()) {

@@ -34,5 +34,5 @@ public interface ChainedProxyManager {
      * @param chainedProxies
      */
     void lookupChainedProxies(HttpRequest httpRequest,
-            Queue<ChainedProxy> chainedProxies);
+                              Queue<ChainedProxy> chainedProxies);
 }

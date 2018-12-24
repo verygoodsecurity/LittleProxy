@@ -166,7 +166,7 @@ public interface HttpFilters {
      *         DNS resolution continue.
      */
     InetSocketAddress proxyToServerResolutionStarted(
-            String resolvingServerHostAndPort);
+        String resolvingServerHostAndPort);
 
     /**
      * Informs filter that proxy to server DNS resolution failed for the specified host and port.
@@ -184,7 +184,7 @@ public interface HttpFilters {
      *            Address it was proxyToServerResolutionSucceeded to
      */
     void proxyToServerResolutionSucceeded(String serverHostAndPort,
-            InetSocketAddress resolvedRemoteAddress);
+                                          InetSocketAddress resolvedRemoteAddress);
 
     /**
      * Informs filter that proxy to server connection is initiating.
@@ -204,7 +204,7 @@ public interface HttpFilters {
     /**
      * Informs filter that proxy to server connection has succeeded.
      *
-     * @param serverCtx the {@link io.netty.channel.ChannelHandlerContext} used to connect to the server
+     * @param serverCtx the {@link ChannelHandlerContext} used to connect to the server
      */
     void proxyToServerConnectionSucceeded(ChannelHandlerContext serverCtx);
 
