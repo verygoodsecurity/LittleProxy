@@ -12,6 +12,7 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -94,6 +95,8 @@ public class ServerGroup {
      */
     private final AtomicBoolean stopped = new AtomicBoolean(false);
 
+    private final ExecutorService processingExecutorService;
+
     /**
      * Creates a new ServerGroup instance for a proxy. Threads created for this ServerGroup will have the specified
      * ServerGroup name in the Thread name. This constructor does not actually initialize any thread pools; instead,
@@ -104,12 +107,16 @@ public class ServerGroup {
      * @param incomingWorkerThreads number of client-to-proxy worker threads per protocol
      * @param outgoingWorkerThreads number of proxy-to-server worker threads per protocol
      */
-    public ServerGroup(String name, int incomingAcceptorThreads, int incomingWorkerThreads, int outgoingWorkerThreads) {
+    public ServerGroup(String name, int incomingAcceptorThreads,
+                       int incomingWorkerThreads, int outgoingWorkerThreads,
+                       ExecutorService processingExecutorService) {
         this.name = name;
         this.serverGroupId = serverGroupCount.getAndIncrement();
         this.incomingAcceptorThreads = incomingAcceptorThreads;
         this.incomingWorkerThreads = incomingWorkerThreads;
         this.outgoingWorkerThreads = outgoingWorkerThreads;
+        this.processingExecutorService = processingExecutorService;
+
     }
 
     /**
@@ -225,6 +232,14 @@ public class ServerGroup {
             } else {
                 group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
             }
+        }
+
+        processingExecutorService.shutdown();
+
+        try {
+            processingExecutorService.awaitTermination(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            // ignore for now
         }
 
         if (graceful) {

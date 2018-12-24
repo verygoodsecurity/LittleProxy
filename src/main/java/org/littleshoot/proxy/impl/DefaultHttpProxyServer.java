@@ -482,13 +482,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
 
             serverGroup.unregisterProxyServer(this, graceful);
 
-            processingExecutorService.shutdown();
 
-            try {
-                processingExecutorService.awaitTermination(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                // ignore for now
-            }
 
             // remove the shutdown hook that was added when the proxy was started, since it has now been stopped
             try {
@@ -1042,7 +1036,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 serverGroup = this.serverGroup;
             }
             else {
-                serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads, clientToProxyWorkerThreads, proxyToServerWorkerThreads);
+                serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads,
+                    clientToProxyWorkerThreads, proxyToServerWorkerThreads, executor);
             }
 
             return new DefaultHttpProxyServer(serverGroup,
