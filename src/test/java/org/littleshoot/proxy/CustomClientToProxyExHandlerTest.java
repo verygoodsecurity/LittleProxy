@@ -1,5 +1,6 @@
 package org.littleshoot.proxy;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
 import org.apache.http.NoHttpResponseException;
@@ -30,7 +31,7 @@ public class CustomClientToProxyExHandlerTest extends AbstractProxyTest {
         .withFiltersSource(new HttpFiltersSourceAdapter() {
           @Override
           public HttpFilters filterRequest(HttpRequest originalRequest,
-                                           ChannelHandlerContext ctx) {
+                                           Channel channel) {
             throw new RuntimeException(EXCEPTION_MESSAGE);
           }
         })

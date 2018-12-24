@@ -238,7 +238,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         // should not be filtered), fall back to the default no-op filter source.
         HttpFilters filterInstance;
         try {
-            filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+            filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, this.channel);
         } finally {
             // releasing a copied http request
             if (currentRequest instanceof ReferenceCounted) {
