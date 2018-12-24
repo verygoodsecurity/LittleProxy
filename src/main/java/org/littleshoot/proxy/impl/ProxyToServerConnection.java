@@ -902,12 +902,14 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         final EventLoopGroup processingEventLoopGroup = clientConnection.processingEventLoopGroup;
         processingEventLoopGroup.register(channel);
 
+        EventLoopGroup wrappedEvenLoop = new WrappedEvenLoop(this.clientConnection.channel, this.channel.eventLoop());
+
         if (trafficHandler != null) {
             pipeline.addLast( "global-traffic-shaping", trafficHandler);
         }
 
-        pipeline.addLast(  "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast(  "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast( wrappedEvenLoop, "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast( wrappedEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast( "encoder", new HttpRequestEncoder());
         pipeline.addLast( "decoder", new HeadAwareHttpResponseDecoder(
@@ -922,8 +924,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
         }
 
-        pipeline.addLast(  "responseReadMonitor", responseReadMonitor);
-        pipeline.addLast( "requestWrittenMonitor", requestWrittenMonitor);
+        pipeline.addLast( wrappedEvenLoop, "responseReadMonitor", responseReadMonitor);
+        pipeline.addLast( wrappedEvenLoop,"requestWrittenMonitor", requestWrittenMonitor);
 
         // Set idle timeout
         pipeline.addLast(

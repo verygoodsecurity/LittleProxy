@@ -799,12 +799,14 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
+        EventLoopGroup wrappedEvenLoop = new WrappedEvenLoop(this.channel, this.channel.eventLoop());
+
         if (proxyServer.getRequestTracer() != null) {
             pipeline.addLast( "requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        pipeline.addLast( "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast( "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(wrappedEvenLoop,  "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(wrappedEvenLoop,  "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast( "encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
@@ -821,8 +823,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
         }
 
-        pipeline.addLast( "requestReadMonitor", requestReadMonitor);
-        pipeline.addLast( "responseWrittenMonitor", responseWrittenMonitor);
+        pipeline.addLast( wrappedEvenLoop, "requestReadMonitor", requestReadMonitor);
+        pipeline.addLast( wrappedEvenLoop, "responseWrittenMonitor", responseWrittenMonitor);
 
         pipeline.addLast(
                 "idle",

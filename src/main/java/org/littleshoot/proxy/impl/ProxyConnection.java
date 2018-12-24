@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -829,6 +830,50 @@ abstract class ProxyConnection<I extends HttpObject> extends
             }  finally {
                 proxyServer.getGlobalStateHandler().clear();
             }
+        }
+    }
+
+    public class WrappedEvenLoop extends DefaultEventLoop {
+
+        private final Channel channel;
+
+        private final EventExecutor eventLoop;
+
+        WrappedEvenLoop(Channel channel, EventExecutor eventExecutor) {
+            this.channel = channel;
+            this.eventLoop = eventExecutor;
+        }
+
+        @Override
+        public void execute(Runnable task) {
+            if (eventLoop.inEventLoop()) {
+                wrapTask(task).run();
+            } else {
+                eventLoop.execute(wrapTask(task));
+            }
+        }
+
+        @Override
+        public boolean inEventLoop() {
+            return false;
+        }
+
+        private Runnable wrapTask(Runnable task) {
+            return () -> {
+                if (proxyServer.getGlobalStateHandler() != null) {
+                    try {
+                        proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
+                    } finally {
+                        try {
+                            task.run();
+                        } finally {
+                            proxyServer.getGlobalStateHandler().clear();
+                        }
+                    }
+                } else {
+                    task.run();
+                }
+            };
         }
     }
 
