@@ -911,7 +911,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             for (;;) {
                 Runnable task = takeTask();
                 if (task != null) {
-                    runTask(task);
+                    task.run();
                     updateLastExecutionTime();
                 }
                 if ((proxyToServerChannel == null && isClosed(clientToProxyChannel)) ||
@@ -950,19 +950,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
         private boolean isClosed(Channel channel) {
             return channel == null || (!channel.isRegistered() && !channel.isActive() && !channel.isOpen());
-        }
-
-        private void runTask(Runnable task) {
-            if (proxyServer.getGlobalStateHandler() != null) {
-                try {
-                    proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyChannel);
-                    task.run();
-                } finally {
-                    proxyServer.getGlobalStateHandler().clear();
-                }
-            } else {
-                task.run();
-            }
         }
     }
 
