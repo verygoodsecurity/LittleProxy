@@ -833,13 +833,13 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
     }
 
-    public class WrappedEvenLoop extends DefaultEventLoop {
+    public class GlobalStateWrapperEvenLoop extends DefaultEventLoop {
 
         private final Channel channel;
 
         private final EventExecutor eventLoop;
 
-        WrappedEvenLoop(Channel channel, EventExecutor eventExecutor) {
+        GlobalStateWrapperEvenLoop(Channel channel, EventExecutor eventExecutor) {
             this.channel = channel;
             this.eventLoop = eventExecutor;
         }

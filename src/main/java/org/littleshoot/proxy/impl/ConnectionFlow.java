@@ -133,7 +133,7 @@ class ConnectionFlow {
         currentStep.execute().addListener(
                 new GenericFutureListener<Future<?>>() {
                     public void operationComplete(
-                            Future<?> future)
+                            io.netty.util.concurrent.Future<?> future)
                             throws Exception {
                         synchronized (connectLock) {
                             if (future.isSuccess()) {

@@ -799,19 +799,19 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
-        EventLoopGroup wrappedEvenLoop = new WrappedEvenLoop(this.channel, this.channel.eventLoop());
+        EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(this.channel, this.channel.eventLoop());
 
         if (proxyServer.getRequestTracer() != null) {
-            pipeline.addLast(wrappedEvenLoop, "requestTracerHandler", new RequestTracerHandler(this));
+            pipeline.addLast(globalStateWrapperEvenLoop, "requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        pipeline.addLast(wrappedEvenLoop,  "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast(wrappedEvenLoop,  "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast( "encoder", new HttpResponseEncoder());
+        pipeline.addLast("encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
         // respectively.
-        pipeline.addLast( "decoder", new HttpRequestDecoder(
+        pipeline.addLast("decoder", new HttpRequestDecoder(
                 proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
@@ -823,8 +823,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer, processingEventLoopGroup);
         }
 
-        pipeline.addLast( wrappedEvenLoop, "requestReadMonitor", requestReadMonitor);
-        pipeline.addLast( wrappedEvenLoop, "responseWrittenMonitor", responseWrittenMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "requestReadMonitor", requestReadMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "responseWrittenMonitor", responseWrittenMonitor);
 
         pipeline.addLast(
                 "idle",
