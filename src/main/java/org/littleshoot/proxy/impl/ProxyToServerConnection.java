@@ -829,7 +829,10 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * @throws UnknownHostException when {@link #setupConnectionParameters()} is unable to resolve the hostname
      */
     private void resetConnectionForRetry() throws UnknownHostException {
-        this.channel.close();
+        if (this.channel.pipeline().get("handler") != null) {
+          this.channel.pipeline().remove("handler");
+        }
+        this.ctx = null;
         this.setupConnectionParameters();
     }
 
