@@ -802,7 +802,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         EventLoopGroup wrappedEvenLoop = new WrappedEvenLoop(this.channel, this.channel.eventLoop());
 
         if (proxyServer.getRequestTracer() != null) {
-            pipeline.addLast( "requestTracerHandler", new RequestTracerHandler(this));
+            pipeline.addLast(wrappedEvenLoop, "requestTracerHandler", new RequestTracerHandler(this));
         }
 
         pipeline.addLast(wrappedEvenLoop,  "bytesReadMonitor", bytesReadMonitor);
