@@ -936,11 +936,12 @@ abstract class ProxyConnection<I extends HttpObject> extends
 
             synchronized (lock) {
                 addTask(task);
+                if (!started) {
+                    proxyServer.getProcessingExecutor().execute(this::run);
+                    started = true;
+                }
             }
-            if (!started) {
-                proxyServer.getProcessingExecutor().execute(this::run);
-                started = true;
-            }
+
         }
 
         @Override
