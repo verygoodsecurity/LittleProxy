@@ -213,7 +213,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
           ctx.fireChannelRead(httpRequest);
         }
 
-        return state();
+        return getCurrentState();
     }
 
     /**
@@ -386,6 +386,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
                 // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
                 clientToProxyResponse = currentFilters.clientToProxyRequest(httpRequest);
+
+                if (msg instanceof ReferenceCounted) {
+                    LOG.debug("Retaining reference counted message");
+                    ((ReferenceCounted) msg).retain();
+                }
 
                 ctx.fireChannelRead(httpRequest);
 //            });
