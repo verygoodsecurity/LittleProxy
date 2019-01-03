@@ -3,7 +3,10 @@ package org.littleshoot.proxy.impl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -137,6 +140,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private AtomicBoolean authenticated = new AtomicBoolean();
 
+    public HttpRequest initialHttpRequest;
+
     private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
 
     ClientToProxyConnection(
@@ -201,8 +206,12 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             LOG.debug("Not authenticated!!");
             return AWAITING_PROXY_AUTHENTICATION;
         } else {
-            return doReadHTTPInitial(httpRequest);
+          this.ctx.fireChannelRead(httpRequest);
         }
+
+        initialHttpRequest = httpRequest;
+
+        return ConnectionState.CLIENT_TO_PROXY_PROCESSING;
     }
 
     /**
@@ -223,30 +232,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @param httpRequest
      * @return
      */
-    private ConnectionState doReadHTTPInitial(HttpRequest httpRequest) {
-        // Make a copy of the original request
-        final HttpRequest currentRequest = copy(httpRequest);
-
-        // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
-        // should not be filtered), fall back to the default no-op filter source.
-        HttpFilters filterInstance;
-        try {
-            filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
-        } finally {
-            // releasing a copied http request
-            if (currentRequest instanceof ReferenceCounted) {
-                ((ReferenceCounted)currentRequest).release();
-            }
-        }
-        if (filterInstance != null) {
-            currentFilters = filterInstance;
-        } else {
-            currentFilters = HttpFiltersAdapter.NOOP_FILTER;
-        }
-
-        // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-        HttpResponse clientToProxyFilterResponse = currentFilters.clientToProxyRequest(httpRequest);
-
+    public ConnectionState doReadHTTPInitial(HttpRequest httpRequest, HttpResponse clientToProxyFilterResponse) {
         if (clientToProxyFilterResponse != null) {
             LOG.debug("Responding to client with short-circuit response from filter: {}", clientToProxyFilterResponse);
 
@@ -363,6 +349,45 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             return AWAITING_CHUNK;
         } else {
             return AWAITING_INITIAL;
+        }
+    }
+
+    @Sharable
+    protected class ClientToProxyProcessor extends ChannelDuplexHandler {
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+
+          HttpRequest httpRequest = (HttpRequest) msg;
+            // Make a copy of the original request
+            final HttpRequest currentRequest = copy(httpRequest);
+
+            // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
+            // should not be filtered), fall back to the default no-op filter source.
+            HttpFilters filterInstance;
+            try {
+                filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+            } finally {
+                // releasing a copied http request
+                if (currentRequest instanceof ReferenceCounted) {
+                    ((ReferenceCounted)currentRequest).release();
+                }
+            }
+            if (filterInstance != null) {
+                currentFilters = filterInstance;
+            } else {
+                currentFilters = HttpFiltersAdapter.NOOP_FILTER;
+            }
+
+            // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
+            HttpResponse httpResponse = currentFilters.clientToProxyRequest(httpRequest);
+            ctx.fireChannelRead(httpResponse);
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx,
+                          Object msg, ChannelPromise promise) throws Exception {
+            super.write(ctx, msg, promise);
         }
     }
 
@@ -830,7 +855,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
         }
 
-        pipeline.addLast("handler", this);
+        pipeline.addLast("handlerBegin", this);
+
+        pipeline.addLast("clientToProxyProcessor", new ClientToProxyProcessor());
+
+        pipeline.addLast("handlerEnd", this);
 
     }
 

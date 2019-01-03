@@ -160,6 +160,8 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 // to require authentication.
             }
             break;
+        case CLIENT_TO_PROXY_PROCESSING:
+            ((ClientToProxyConnection)this).doReadHTTPInitial(((ClientToProxyConnection)this).initialHttpRequest, (HttpResponse)httpObject);
         case CONNECTING:
             LOG.warn("Attempted to read from connection that's in the process of connecting.  This shouldn't happen.");
             break;
