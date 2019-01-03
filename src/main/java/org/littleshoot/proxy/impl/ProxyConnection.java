@@ -108,7 +108,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param msg
      */
-    protected void read(Object msg) {
+    protected void read(ChannelHandlerContext ctx, Object msg) {
         LOG.debug("Reading: {}", msg);
 
         lastReadTime = System.currentTimeMillis();
@@ -118,7 +118,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             readRaw((ByteBuf) msg);
         } else {
             // If not tunneling, then we are always dealing with HttpObjects.
-            readHTTP((HttpObject) msg);
+            readHTTP(ctx, (HttpObject) msg);
         }
     }
 
@@ -128,12 +128,16 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param httpObject
      */
     @SuppressWarnings("unchecked")
-    private void readHTTP(HttpObject httpObject) {
+    private void readHTTP(ChannelHandlerContext ctx, HttpObject httpObject) {
         ConnectionState nextState = getCurrentState();
         switch (getCurrentState()) {
         case AWAITING_INITIAL:
             if (httpObject instanceof HttpMessage) {
-                nextState = readHTTPInitial((I) httpObject);
+                if (this.ctx.name().equals("handlerEnd")) {
+                    nextState = ((ClientToProxyConnection)this).doReadHTTPInitial((HttpRequest) httpObject);
+                } else {
+                    nextState = readHTTPInitial(ctx, (I) httpObject);
+                }
             } else {
                 // Similar to the AWAITING_PROXY_AUTHENTICATION case below, we may enter an AWAITING_INITIAL
                 // state if the proxy responded to an earlier request with a 502 or 504 response, or a short-circuit
@@ -151,7 +155,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
         case AWAITING_PROXY_AUTHENTICATION:
             if (httpObject instanceof HttpRequest) {
                 // Once we get an HttpRequest, try to process it as usual
-                nextState = readHTTPInitial((I) httpObject);
+                nextState = readHTTPInitial(ctx, (I) httpObject);
             } else {
                 // Anything that's not an HttpRequest that came in while
                 // we're pending authentication gets dropped on the floor. This
@@ -160,8 +164,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 // to require authentication.
             }
             break;
-        case CLIENT_TO_PROXY_PROCESSING:
-            ((ClientToProxyConnection)this).doReadHTTPInitial(((ClientToProxyConnection)this).initialHttpRequest, (HttpResponse)httpObject);
         case CONNECTING:
             LOG.warn("Attempted to read from connection that's in the process of connecting.  This shouldn't happen.");
             break;
@@ -191,7 +193,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param httpObject
      * @return
      */
-    protected abstract ConnectionState readHTTPInitial(I httpObject);
+    protected abstract ConnectionState readHTTPInitial(ChannelHandlerContext ctx, I httpObject);
 
     /**
      * Implement this to handle reading a chunk in a chunked transfer.
@@ -535,6 +537,10 @@ abstract class ProxyConnection<I extends HttpObject> extends
         this.currentState = state;
     }
 
+    protected ConnectionState state() {
+        return this.currentState;
+    }
+
     protected ConnectionState getCurrentState() {
         return currentState;
     }
@@ -587,7 +593,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        read(msg);
+        read(ctx, msg);
     }
 
     @Override

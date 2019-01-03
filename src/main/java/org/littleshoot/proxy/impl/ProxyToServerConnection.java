@@ -8,6 +8,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -209,19 +210,19 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      **************************************************************************/
 
     @Override
-    protected void read(Object msg) {
+    protected void read(ChannelHandlerContext ctx, Object msg) {
         if (isConnecting()) {
             LOG.debug(
                     "In the middle of connecting, forwarding message to connection flow: {}",
                     msg);
             this.connectionFlow.read(msg);
         } else {
-            super.read(msg);
+            super.read(ctx, msg);
         }
     }
 
     @Override
-    protected ConnectionState readHTTPInitial(HttpResponse httpResponse) {
+    protected ConnectionState readHTTPInitial(ChannelHandlerContext ctx, HttpResponse httpResponse) {
         LOG.debug("Received raw response: {}", httpResponse);
 
         if (httpResponse.getDecoderResult().isFailure()) {

@@ -6,8 +6,6 @@ enum ConnectionState {
      */
     CONNECTING(true),
 
-    CLIENT_TO_PROXY_PROCESSING,
-
     /**
      * In the middle of doing an SSL handshake.
      */
