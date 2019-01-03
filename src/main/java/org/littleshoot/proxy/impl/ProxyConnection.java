@@ -155,7 +155,11 @@ abstract class ProxyConnection<I extends HttpObject> extends
         case AWAITING_PROXY_AUTHENTICATION:
             if (httpObject instanceof HttpRequest) {
                 // Once we get an HttpRequest, try to process it as usual
-                nextState = readHTTPInitial(ctx, (I) httpObject);
+                if (ctx.name().equals("handlerEnd")) {
+                    nextState = ((ClientToProxyConnection)this).doReadHTTPInitial((HttpRequest) httpObject);
+                } else {
+                    nextState = readHTTPInitial(ctx, (I) httpObject);
+                }
             } else {
                 // Anything that's not an HttpRequest that came in while
                 // we're pending authentication gets dropped on the floor. This
