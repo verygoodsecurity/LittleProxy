@@ -133,7 +133,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
         switch (getCurrentState()) {
         case AWAITING_INITIAL:
             if (httpObject instanceof HttpMessage) {
-                if (this.ctx.name().equals("handlerEnd")) {
+                if (ctx.name().equals("handlerEnd")) {
                     nextState = ((ClientToProxyConnection)this).doReadHTTPInitial((HttpRequest) httpObject);
                 } else {
                     nextState = readHTTPInitial(ctx, (I) httpObject);
