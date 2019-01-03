@@ -362,7 +362,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-            executor.execute(() -> {
+//            executor.execute(() -> {
                 HttpRequest httpRequest = (HttpRequest) msg;
                 // Make a copy of the original request
                 final HttpRequest currentRequest = copy(httpRequest);
@@ -388,7 +388,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 clientToProxyResponse = currentFilters.clientToProxyRequest(httpRequest);
 
                 ctx.fireChannelRead(httpRequest);
-            });
+//            });
 
         }
 
