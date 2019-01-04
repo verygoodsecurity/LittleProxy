@@ -412,7 +412,13 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         @Override
         public void write(ChannelHandlerContext ctx,
                           Object msg, ChannelPromise promise) throws Exception {
-            super.write(ctx, msg, promise);
+            HttpObject httpObject = ((HttpObject)msg);
+            httpObject = currentFilters.proxyToClientResponse(httpObject);
+            if (httpObject == null) {
+                forceDisconnect(currentServerConnection);
+            } else {
+                super.write(ctx, msg, promise);
+            }
         }
     }
 
@@ -517,12 +523,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
             fixHttpVersionHeaderIfNecessary(httpResponse);
             modifyResponseHeadersToReflectProxying(httpResponse);
-        }
-
-        httpObject = filters.proxyToClientResponse(httpObject);
-        if (httpObject == null) {
-            forceDisconnect(serverConnection);
-            return;
         }
 
         write(httpObject);
