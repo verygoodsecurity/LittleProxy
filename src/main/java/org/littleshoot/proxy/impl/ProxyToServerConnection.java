@@ -658,8 +658,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             cb.handler(new ChannelInitializer<Channel>() {
                 protected void initChannel(Channel ch) throws Exception {
-                    initChannelPipeline(ch.pipeline(), initialRequest);
-                };
+                    initChannelPipeline(ch.pipeline(), ch);
+                }
             });
             cb.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                     proxyServer.getConnectTimeout());
@@ -911,7 +911,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * @param httpRequest
      */
     private void initChannelPipeline(ChannelPipeline pipeline,
-            HttpRequest httpRequest) {
+            Channel channel) {
         if (trafficHandler != null) {
             pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
