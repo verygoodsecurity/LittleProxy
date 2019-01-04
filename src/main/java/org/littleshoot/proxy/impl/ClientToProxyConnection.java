@@ -162,7 +162,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         this.channel = channel;
 
-        initChannelPipeline(pipeline, channel);
+        initChannelPipeline(pipeline);
 
         if (sslEngineSource != null) {
             LOG.debug("Enabling encryption of traffic from client to proxy");
@@ -426,21 +426,12 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
   public class GlobalStateWrapperEvenLoop extends DefaultEventLoop {
 
-    private final Channel channel;
-
-    private final EventExecutor eventLoop;
-
-    GlobalStateWrapperEvenLoop(Channel channel) {
-      this.channel = channel;
-      this.eventLoop = channel.eventLoop();
-    }
-
     @Override
     public void execute(Runnable task) {
-      if (eventLoop.inEventLoop()) {
+      if (channel.eventLoop().inEventLoop()) {
         wrapTask(task).run();
       } else {
-        eventLoop.execute(wrapTask(task));
+        channel.eventLoop().execute(wrapTask(task));
       }
     }
 
@@ -450,7 +441,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
   }
 
-  private Runnable wrapTask(Runnable task) {
+  Runnable wrapTask(Runnable task) {
     return () -> {
       if (proxyServer.getGlobalStateHandler() != null) {
         try {
@@ -891,14 +882,14 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * 
      * @param pipeline
      */
-    private void initChannelPipeline(ChannelPipeline pipeline, Channel channel) {
+    private void initChannelPipeline(ChannelPipeline pipeline) {
         LOG.debug("Configuring ChannelPipeline");
 
         if (proxyServer.getRequestTracer() != null) {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(channel);
+        EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop();
 
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
