@@ -28,7 +28,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
@@ -54,8 +53,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -354,8 +351,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
     }
 
-    private static final Executor executor = Executors.newCachedThreadPool();
-
     @Sharable
     protected class ClientToProxyProcessor extends ChannelDuplexHandler {
 
@@ -372,7 +367,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
           if (ProxyUtils.isChunked(httpRequest)) {
               process(ctx, msg, httpRequest);
           } else {
-              executor.execute(wrapTask(() -> process(ctx, msg, httpRequest)));
+              proxyServer.getPayloadProcessorExecutor()
+                  .execute(wrapTask(() -> process(ctx, msg, httpRequest)));
           }
 
         }

@@ -4,6 +4,7 @@ import org.littleshoot.proxy.impl.ThreadPoolConfiguration;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Configures and starts an {@link HttpProxyServer}. The HttpProxyServer is
@@ -241,6 +242,14 @@ public interface HttpProxyServerBootstrap {
      */
     HttpProxyServerBootstrap withCustomGlobalState(
         GlobalStateHandler globalStateHandler);
+
+    /**
+     *
+     * @param payloadProcessorExecutor
+     * @return
+     */
+    HttpProxyServerBootstrap withPyaloadProcessorExecutor(
+        ExecutorService payloadProcessorExecutor);
 
     /**
      * <p>

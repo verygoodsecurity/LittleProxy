@@ -12,6 +12,8 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,6 +74,8 @@ public class ServerGroup {
      */
     private final EnumMap<TransportProtocol, ProxyThreadPools> protocolThreadPools = new EnumMap<TransportProtocol, ProxyThreadPools>(TransportProtocol.class);
 
+    private final ExecutorService payloadProcessingExecutor;
+
     /**
      * A mapping of selector providers to transport protocols. Avoids special-casing each transport protocol during
      * transport protocol initialization.
@@ -104,12 +108,19 @@ public class ServerGroup {
      * @param incomingWorkerThreads number of client-to-proxy worker threads per protocol
      * @param outgoingWorkerThreads number of proxy-to-server worker threads per protocol
      */
-    public ServerGroup(String name, int incomingAcceptorThreads, int incomingWorkerThreads, int outgoingWorkerThreads) {
+    public ServerGroup(String name, int incomingAcceptorThreads,
+                       int incomingWorkerThreads, int outgoingWorkerThreads,
+                       ExecutorService payloadProcessingExecutor) {
         this.name = name;
         this.serverGroupId = serverGroupCount.getAndIncrement();
         this.incomingAcceptorThreads = incomingAcceptorThreads;
         this.incomingWorkerThreads = incomingWorkerThreads;
         this.outgoingWorkerThreads = outgoingWorkerThreads;
+        if (payloadProcessingExecutor == null) {
+            this.payloadProcessingExecutor = Executors.newFixedThreadPool(incomingWorkerThreads);
+        } else {
+            this.payloadProcessingExecutor = payloadProcessingExecutor;
+        }
     }
 
     /**
@@ -217,6 +228,14 @@ public class ServerGroup {
 
         for (ProxyThreadPools threadPools : protocolThreadPools.values()) {
             allEventLoopGroups.addAll(threadPools.getAllEventLoops());
+        }
+
+        payloadProcessingExecutor.shutdown();
+
+        try {
+            payloadProcessingExecutor.awaitTermination(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            log.warn("Failed to shutdown payload processing executor properly", e);
         }
 
         for (EventLoopGroup group : allEventLoopGroups) {
