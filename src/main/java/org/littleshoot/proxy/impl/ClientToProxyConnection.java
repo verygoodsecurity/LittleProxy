@@ -9,6 +9,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -426,12 +427,18 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
   public class GlobalStateWrapperEvenLoop extends DefaultEventLoop {
 
+    private final EventLoop eventLoop;
+
+    GlobalStateWrapperEvenLoop(EventLoop eventLoop) {
+      this.eventLoop = eventLoop;
+    }
+
     @Override
     public void execute(Runnable task) {
-      if (channel.eventLoop().inEventLoop()) {
+      if (eventLoop.inEventLoop()) {
         wrapTask(task).run();
       } else {
-        channel.eventLoop().execute(wrapTask(task));
+        eventLoop.execute(wrapTask(task));
       }
     }
 
@@ -889,7 +896,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop();
+        EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(channel.eventLoop());
 
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);

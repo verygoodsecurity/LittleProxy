@@ -916,7 +916,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
 
-        EventLoopGroup globalStateWrapperEvenLoop = clientConnection.new GlobalStateWrapperEvenLoop();
+        EventLoopGroup globalStateWrapperEvenLoop = clientConnection.new GlobalStateWrapperEvenLoop(channel.eventLoop());
 
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
