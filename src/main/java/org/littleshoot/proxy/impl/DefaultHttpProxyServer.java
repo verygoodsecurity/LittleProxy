@@ -552,7 +552,8 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                         sslEngineSource,
                         authenticateSslClients,
                         ch.pipeline(),
-                        globalTrafficShapingHandler);
+                        globalTrafficShapingHandler,
+                        ch);
             };
         };
         switch (transportProtocol) {

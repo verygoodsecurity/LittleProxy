@@ -8,6 +8,8 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -25,6 +27,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.commons.lang3.StringUtils;
@@ -153,10 +156,13 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             SslEngineSource sslEngineSource,
             boolean authenticateClients,
             ChannelPipeline pipeline,
-            GlobalTrafficShapingHandler globalTrafficShapingHandler) {
+            GlobalTrafficShapingHandler globalTrafficShapingHandler,
+            Channel channel) {
         super(AWAITING_INITIAL, proxyServer, false);
 
-        initChannelPipeline(pipeline);
+        this.channel = channel;
+
+        initChannelPipeline(pipeline, channel);
 
         if (sslEngineSource != null) {
             LOG.debug("Enabling encryption of traffic from client to proxy");
@@ -204,14 +210,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             return DISCONNECT_REQUESTED;
         }
 
-        boolean authenticationRequired = authenticationRequired(httpRequest);
-
-        if (authenticationRequired) {
-            LOG.debug("Not authenticated!!");
-            return AWAITING_PROXY_AUTHENTICATION;
-        } else {
-          ctx.fireChannelRead(httpRequest);
-        }
+        ctx.fireChannelRead(httpRequest);
 
         return getCurrentState();
     }
@@ -372,48 +371,50 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
           if (ProxyUtils.isChunked(httpRequest)) {
               process(ctx, msg, httpRequest);
           } else {
-              executor.execute(() -> {
-                  proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
-                  try {
-                      process(ctx, msg, httpRequest);
-                  } finally {
-                      proxyServer.getGlobalStateHandler().clear();
-                  }
-              });
+              executor.execute(wrapTask(() -> process(ctx, msg, httpRequest)));
           }
 
         }
 
         private void process(ChannelHandlerContext ctx, Object msg, HttpRequest httpRequest) {
-            // Make a copy of the original request
-            final HttpRequest currentRequest = copy(httpRequest);
 
-            // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
-            // should not be filtered), fall back to the default no-op filter source.
-            HttpFilters filterInstance;
-            try {
+            boolean authenticationRequired = authenticationRequired(httpRequest);
+
+            if (authenticationRequired) {
+              LOG.debug("Not authenticated!!");
+              become(AWAITING_PROXY_AUTHENTICATION);
+            } else {
+
+              // Make a copy of the original request
+              final HttpRequest currentRequest = copy(httpRequest);
+
+              // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
+              // should not be filtered), fall back to the default no-op filter source.
+              HttpFilters filterInstance;
+              try {
                 filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
-            } finally {
+              } finally {
                 // releasing a copied http request
                 if (currentRequest instanceof ReferenceCounted) {
-                    ((ReferenceCounted)currentRequest).release();
+                  ((ReferenceCounted) currentRequest).release();
                 }
-            }
-            if (filterInstance != null) {
+              }
+              if (filterInstance != null) {
                 currentFilters = filterInstance;
-            } else {
+              } else {
                 currentFilters = HttpFiltersAdapter.NOOP_FILTER;
-            }
+              }
 
-            // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-            clientToProxyResponse = currentFilters.clientToProxyRequest(httpRequest);
+              // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
+              clientToProxyResponse = currentFilters.clientToProxyRequest(httpRequest);
 
-            if (msg instanceof ReferenceCounted) {
+              if (msg instanceof ReferenceCounted) {
                 LOG.debug("Retaining reference counted message");
                 ((ReferenceCounted) msg).retain();
-            }
+              }
 
-            ctx.fireChannelRead(httpRequest);
+              ctx.fireChannelRead(httpRequest);
+            }
         }
 
         @Override
@@ -422,6 +423,50 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
           super.write(ctx, msg, promise);
         }
     }
+
+  public class GlobalStateWrapperEvenLoop extends DefaultEventLoop {
+
+    private final Channel channel;
+
+    private final EventExecutor eventLoop;
+
+    GlobalStateWrapperEvenLoop(Channel channel) {
+      this.channel = channel;
+      this.eventLoop = channel.eventLoop();
+    }
+
+    @Override
+    public void execute(Runnable task) {
+      if (eventLoop.inEventLoop()) {
+        wrapTask(task).run();
+      } else {
+        eventLoop.execute(wrapTask(task));
+      }
+    }
+
+    @Override
+    public boolean inEventLoop() {
+      return false;
+    }
+  }
+
+  private Runnable wrapTask(Runnable task) {
+    return () -> {
+      if (proxyServer.getGlobalStateHandler() != null) {
+        try {
+          proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
+        } finally {
+          try {
+            task.run();
+          } finally {
+            proxyServer.getGlobalStateHandler().clear();
+          }
+        }
+      } else {
+        task.run();
+      }
+    };
+  }
 
     /**
      * Returns true if the specified request is a request to an origin server, rather than to a proxy server. If this
@@ -846,19 +891,17 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * 
      * @param pipeline
      */
-    private void initChannelPipeline(ChannelPipeline pipeline) {
+    private void initChannelPipeline(ChannelPipeline pipeline, Channel channel) {
         LOG.debug("Configuring ChannelPipeline");
 
         if (proxyServer.getRequestTracer() != null) {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        if (proxyServer.getGlobalStateHandler() != null) {
-            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
-        }
+        EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(channel);
 
-        pipeline.addLast("bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast("bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast("encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
@@ -875,23 +918,19 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
         }
 
-        pipeline.addLast("requestReadMonitor", requestReadMonitor);
-        pipeline.addLast("responseWrittenMonitor", responseWrittenMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "requestReadMonitor", requestReadMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "responseWrittenMonitor", responseWrittenMonitor);
 
         pipeline.addLast(
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        if (proxyServer.getGlobalStateHandler() != null) {
-            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
-        }
+        pipeline.addLast(globalStateWrapperEvenLoop, "handlerBegin", this);
 
-        pipeline.addLast("handlerBegin", this);
+        pipeline.addLast(globalStateWrapperEvenLoop, "clientToProxyProcessor", new ClientToProxyProcessor());
 
-        pipeline.addLast("clientToProxyProcessor", new ClientToProxyProcessor());
-
-        pipeline.addLast("handlerEnd", this);
+        pipeline.addLast(globalStateWrapperEvenLoop, "handlerEnd", this);
 
     }
 
