@@ -53,6 +53,8 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import static org.littleshoot.proxy.impl.ConnectionState.AWAITING_CHUNK;
@@ -241,16 +243,22 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         currentFilters.serverToProxyResponseReceiving();
 
         rememberCurrentResponse(httpResponse);
-        respondWith(httpResponse);
+
+        final HttpResponse resp = httpResponse;
 
         if (ProxyUtils.isChunked(httpResponse)) {
+            respondWith(resp);
             return AWAITING_CHUNK;
         } else {
-            currentFilters.serverToProxyResponseReceived();
-
+            executor.execute(() -> {
+                currentFilters.serverToProxyResponseReceived();
+                respondWith(resp);
+            });
             return AWAITING_INITIAL;
         }
     }
+
+    Executor executor = Executors.newCachedThreadPool();
 
     @Override
     protected void readHTTPChunk(HttpContent chunk) {
