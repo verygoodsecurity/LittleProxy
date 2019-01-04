@@ -133,11 +133,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
         switch (getCurrentState()) {
         case AWAITING_INITIAL:
             if (httpObject instanceof HttpMessage) {
-                if (ctx.name().equals("handlerEnd")) {
-                    nextState = ((ClientToProxyConnection)this).doReadHTTPInitial((HttpRequest) httpObject);
-                } else {
-                    nextState = readHTTPInitial(ctx, (I) httpObject);
-                }
+                nextState = processPayload(ctx, (I) httpObject);
             } else {
                 // Similar to the AWAITING_PROXY_AUTHENTICATION case below, we may enter an AWAITING_INITIAL
                 // state if the proxy responded to an earlier request with a 502 or 504 response, or a short-circuit
@@ -155,11 +151,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
         case AWAITING_PROXY_AUTHENTICATION:
             if (httpObject instanceof HttpRequest) {
                 // Once we get an HttpRequest, try to process it as usual
-                if (ctx.name().equals("handlerEnd")) {
-                    nextState = ((ClientToProxyConnection)this).doReadHTTPInitial((HttpRequest) httpObject);
-                } else {
-                    nextState = readHTTPInitial(ctx, (I) httpObject);
-                }
+                nextState = processPayload(ctx, (I) httpObject);
             } else {
                 // Anything that's not an HttpRequest that came in while
                 // we're pending authentication gets dropped on the floor. This
@@ -188,6 +180,20 @@ abstract class ProxyConnection<I extends HttpObject> extends
             break;
         }
         become(nextState);
+    }
+
+    private ConnectionState processPayload(ChannelHandlerContext ctx, I httpObject) {
+        ConnectionState nextState;
+        if (afterPayloadProcessor(ctx)) {
+            nextState = ((ClientToProxyConnection) this).doReadHTTPInitial((HttpRequest) httpObject);
+        } else {
+            nextState = readHTTPInitial(ctx, httpObject);
+        }
+        return nextState;
+    }
+
+    private boolean afterPayloadProcessor(ChannelHandlerContext ctx) {
+        return ctx.name().equals("handlerEnd");
     }
 
     /**
@@ -539,10 +545,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
      */
     protected void become(ConnectionState state) {
         this.currentState = state;
-    }
-
-    protected ConnectionState state() {
-        return this.currentState;
     }
 
     protected ConnectionState getCurrentState() {

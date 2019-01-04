@@ -352,7 +352,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Sharable
-    protected class ClientToProxyProcessor extends ChannelDuplexHandler {
+    protected class ClientPayloadProcessor extends ChannelDuplexHandler {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -922,7 +922,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         pipeline.addLast(globalStateWrapperEvenLoop, "handlerBegin", this);
 
-        pipeline.addLast(globalStateWrapperEvenLoop, "clientToProxyProcessor", new ClientToProxyProcessor());
+        pipeline.addLast(globalStateWrapperEvenLoop, "clientToProxyProcessor", new ClientPayloadProcessor());
 
         pipeline.addLast(globalStateWrapperEvenLoop, "handlerEnd", this);
 

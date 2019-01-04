@@ -626,7 +626,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     }
 
     protected ExecutorService getPayloadProcessorExecutor() {
-        return payloadProcessorExecutor;
+        return serverGroup.getPayloadProcessingExecutor();
     }
 
     protected RequestTracer getRequestTracer() {

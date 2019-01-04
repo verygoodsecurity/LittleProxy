@@ -300,6 +300,10 @@ public class ServerGroup {
         return getThreadPoolsForProtocol(protocol).getProxyToServerWorkerPool();
     }
 
+    public ExecutorService getPayloadProcessingExecutor() {
+        return payloadProcessingExecutor;
+    }
+
     /**
      * @return true if this ServerGroup has already been stopped
      */
