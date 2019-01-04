@@ -372,7 +372,14 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
           if (ProxyUtils.isChunked(httpRequest)) {
               process(ctx, msg, httpRequest);
           } else {
-              executor.execute(() -> process(ctx, msg, httpRequest));
+              executor.execute(() -> {
+                  proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
+                  try {
+                      process(ctx, msg, httpRequest);
+                  } finally {
+                      proxyServer.getGlobalStateHandler().clear();
+                  }
+              });
           }
 
         }
