@@ -362,39 +362,51 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-//            executor.execute(() -> {
-                HttpRequest httpRequest = (HttpRequest) msg;
-                // Make a copy of the original request
-                final HttpRequest currentRequest = copy(httpRequest);
+          if (msg instanceof ReferenceCounted) {
+            LOG.debug("Retaining reference counted message");
+            ((ReferenceCounted) msg).retain();
+          }
 
-                // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
-                // should not be filtered), fall back to the default no-op filter source.
-                HttpFilters filterInstance;
-                try {
-                    filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
-                } finally {
-                    // releasing a copied http request
-                    if (currentRequest instanceof ReferenceCounted) {
-                        ((ReferenceCounted)currentRequest).release();
-                    }
+          HttpRequest httpRequest = (HttpRequest) msg;
+
+          if (ProxyUtils.isChunked(httpRequest)) {
+              process(ctx, msg, httpRequest);
+          } else {
+              executor.execute(() -> process(ctx, msg, httpRequest));
+          }
+
+        }
+
+        private void process(ChannelHandlerContext ctx, Object msg, HttpRequest httpRequest) {
+            // Make a copy of the original request
+            final HttpRequest currentRequest = copy(httpRequest);
+
+            // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
+            // should not be filtered), fall back to the default no-op filter source.
+            HttpFilters filterInstance;
+            try {
+                filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+            } finally {
+                // releasing a copied http request
+                if (currentRequest instanceof ReferenceCounted) {
+                    ((ReferenceCounted)currentRequest).release();
                 }
-                if (filterInstance != null) {
-                    currentFilters = filterInstance;
-                } else {
-                    currentFilters = HttpFiltersAdapter.NOOP_FILTER;
-                }
+            }
+            if (filterInstance != null) {
+                currentFilters = filterInstance;
+            } else {
+                currentFilters = HttpFiltersAdapter.NOOP_FILTER;
+            }
 
-                // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-                clientToProxyResponse = currentFilters.clientToProxyRequest(httpRequest);
+            // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
+            clientToProxyResponse = currentFilters.clientToProxyRequest(httpRequest);
 
-                if (msg instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) msg).retain();
-                }
+            if (msg instanceof ReferenceCounted) {
+                LOG.debug("Retaining reference counted message");
+                ((ReferenceCounted) msg).retain();
+            }
 
-                ctx.fireChannelRead(httpRequest);
-//            });
-
+            ctx.fireChannelRead(httpRequest);
         }
 
         @Override
