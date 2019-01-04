@@ -250,10 +250,15 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             respondWith(resp);
             return AWAITING_CHUNK;
         } else {
+            if (resp instanceof ReferenceCounted) {
+              LOG.debug("Retaining reference counted message");
+              ((ReferenceCounted) resp).retain();
+            }
+
             executor.execute(() -> {
-                currentFilters.serverToProxyResponseReceived();
-                respondWith(resp);
-            });
+                  currentFilters.serverToProxyResponseReceived();
+                  respondWith(resp);
+              });
             return AWAITING_INITIAL;
         }
     }
