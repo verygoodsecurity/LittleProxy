@@ -3,11 +3,10 @@ package org.littleshoot.proxy.impl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -145,7 +144,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private AtomicBoolean authenticated = new AtomicBoolean();
 
-    public HttpResponse clientToProxyResponse;
+    private HttpResponse clientToProxyResponse;
 
     private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
 
@@ -352,10 +351,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Sharable
-    protected class ClientPayloadProcessor extends ChannelDuplexHandler {
+    protected class ClientPayloadProcessor extends ChannelInboundHandlerAdapter {
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
 
           if (msg instanceof ReferenceCounted) {
             LOG.debug("Retaining reference counted message");
@@ -412,12 +411,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
               ctx.fireChannelRead(httpRequest);
             }
-        }
-
-        @Override
-        public void write(ChannelHandlerContext ctx,
-                          Object msg, ChannelPromise promise) throws Exception {
-          super.write(ctx, msg, promise);
         }
     }
 

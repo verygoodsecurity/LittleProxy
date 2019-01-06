@@ -117,7 +117,7 @@ public class ServerGroup {
         this.incomingWorkerThreads = incomingWorkerThreads;
         this.outgoingWorkerThreads = outgoingWorkerThreads;
         if (payloadProcessingExecutor == null) {
-            this.payloadProcessingExecutor = Executors.newFixedThreadPool(incomingWorkerThreads);
+            this.payloadProcessingExecutor = Executors.newCachedThreadPool();
         } else {
             this.payloadProcessingExecutor = payloadProcessingExecutor;
         }

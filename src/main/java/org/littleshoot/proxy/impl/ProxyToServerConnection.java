@@ -256,10 +256,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
             proxyServer.getPayloadProcessorExecutor()
                 .execute(clientConnection.wrapTask(() -> {
-                  currentFilters.serverToProxyResponseReceived();
                   respondWith(resp);
-              }));
-            return AWAITING_INITIAL;
+                  currentFilters.serverToProxyResponseReceived();
+                  super.become(AWAITING_INITIAL);
+                }));
+            return getCurrentState();
         }
     }
 
