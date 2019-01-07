@@ -7,9 +7,6 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -27,8 +24,10 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+
 import org.apache.commons.lang3.StringUtils;
 import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
@@ -414,30 +413,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
     }
 
-  public class GlobalStateWrapperEvenLoop extends DefaultEventLoop {
-
-    private final EventLoop eventLoop;
-
-    GlobalStateWrapperEvenLoop(EventLoop eventLoop) {
-      this.eventLoop = eventLoop;
-    }
-
-    @Override
-    public void execute(Runnable task) {
-      if (eventLoop.inEventLoop()) {
-        wrapTask(task).run();
-      } else {
-        eventLoop.execute(wrapTask(task));
-      }
-    }
-
-    @Override
-    public boolean inEventLoop() {
-      return false;
-    }
-  }
-
-  Runnable wrapTask(Runnable task) {
+  public Runnable wrapTask(Runnable task) {
     return () -> {
       if (proxyServer.getGlobalStateHandler() != null) {
         try {
@@ -885,7 +861,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(channel.eventLoop());
+//        if (proxyServer.getGlobalStateHandler() != null) {
+//          pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
+//        }
+
+        EventExecutorGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(this);
 
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
@@ -913,11 +893,15 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        pipeline.addLast( "handlerBegin", this);
+//        if (proxyServer.getGlobalStateHandler() != null) {
+//          pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
+//        }
 
-        pipeline.addLast( "clientToProxyProcessor", new ClientPayloadProcessor());
+        pipeline.addLast(globalStateWrapperEvenLoop,  "handlerBegin", this);
 
-        pipeline.addLast( "handlerEnd", this);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "clientToProxyProcessor", new ClientPayloadProcessor());
+
+        pipeline.addLast(globalStateWrapperEvenLoop,  "handlerEnd", this);
 
     }
 

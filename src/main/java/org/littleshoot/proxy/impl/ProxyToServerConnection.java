@@ -12,7 +12,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -33,6 +32,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.littleshoot.proxy.ActivityTracker;
@@ -910,11 +910,16 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      */
     private void initChannelPipeline(ChannelPipeline pipeline,
             Channel channel) {
+
+//        if (proxyServer.getGlobalStateHandler() != null) {
+//            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(clientConnection));
+//        }
+
         if (trafficHandler != null) {
             pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
 
-        EventLoopGroup globalStateWrapperEvenLoop = clientConnection.new GlobalStateWrapperEvenLoop(channel.eventLoop());
+        EventExecutorGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(clientConnection, channel.eventLoop());
 
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
@@ -941,7 +946,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        pipeline.addLast( "handler", this);
+//        if (proxyServer.getGlobalStateHandler() != null) {
+//            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(clientConnection));
+//        }
+
+        pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
     }
 
     /**
