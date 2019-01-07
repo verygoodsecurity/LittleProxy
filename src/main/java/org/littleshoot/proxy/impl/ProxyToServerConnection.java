@@ -917,8 +917,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         EventLoopGroup globalStateWrapperEvenLoop = clientConnection.new GlobalStateWrapperEvenLoop(channel.eventLoop());
 
-        pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast( "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast( "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast("encoder", new HttpRequestEncoder());
         pipeline.addLast("decoder", new HeadAwareHttpResponseDecoder(
@@ -933,8 +933,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
         }
 
-        pipeline.addLast(globalStateWrapperEvenLoop, "responseReadMonitor", responseReadMonitor);
-        pipeline.addLast(globalStateWrapperEvenLoop, "requestWrittenMonitor", requestWrittenMonitor);
+        pipeline.addLast( "responseReadMonitor", responseReadMonitor);
+        pipeline.addLast( "requestWrittenMonitor", requestWrittenMonitor);
 
         // Set idle timeout
         pipeline.addLast(
@@ -942,7 +942,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
 
-        pipeline.addLast(globalStateWrapperEvenLoop, "handler", this);
+        pipeline.addLast( "handler", this);
     }
 
     /**
