@@ -861,7 +861,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             pipeline.addLast("requestTracerHandler", new RequestTracerHandler(this));
         }
 
-        final EventExecutorGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(this);
+        if (proxyServer.getGlobalStateHandler() != null) {
+          pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
+        }
+
+        EventExecutorGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(this);
 
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
@@ -888,6 +892,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
+
+        if (proxyServer.getGlobalStateHandler() != null) {
+          pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
+        }
 
         pipeline.addLast(globalStateWrapperEvenLoop,  "handlerBegin", this);
 

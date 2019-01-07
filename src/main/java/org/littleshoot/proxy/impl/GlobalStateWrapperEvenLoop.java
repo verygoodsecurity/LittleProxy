@@ -33,11 +33,7 @@ public class GlobalStateWrapperEvenLoop implements EventExecutor {
 
   @Override
   public void execute(Runnable command) {
-    if (eventLoop.inEventLoop()) {
-      connection.wrapTask(command).run();
-    } else {
-      eventLoop.execute(connection.wrapTask(command));
-    }
+    eventLoop.execute(connection.wrapTask(command));
   }
 
   @Override
@@ -157,7 +153,7 @@ public class GlobalStateWrapperEvenLoop implements EventExecutor {
 
   @Override
   public boolean inEventLoop() {
-    return false;
+    return eventLoop.inEventLoop();
   }
 
   @Override
