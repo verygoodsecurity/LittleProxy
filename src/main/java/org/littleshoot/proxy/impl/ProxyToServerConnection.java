@@ -911,15 +911,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void initChannelPipeline(ChannelPipeline pipeline,
             Channel channel) {
 
-//        if (proxyServer.getGlobalStateHandler() != null) {
-//            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(clientConnection));
-//        }
-
         if (trafficHandler != null) {
             pipeline.addLast("global-traffic-shaping", trafficHandler);
         }
 
-        EventExecutorGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(clientConnection, channel.eventLoop());
+        final EventExecutorGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(clientConnection, channel.eventLoop());
 
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
@@ -945,10 +941,6 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 "idle",
                 new IdleStateHandler(0, 0, proxyServer
                         .getIdleConnectionTimeout()));
-
-//        if (proxyServer.getGlobalStateHandler() != null) {
-//            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(clientConnection));
-//        }
 
         pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
     }
