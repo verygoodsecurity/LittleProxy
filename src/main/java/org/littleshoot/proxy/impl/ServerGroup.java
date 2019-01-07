@@ -230,13 +230,13 @@ public class ServerGroup {
             allEventLoopGroups.addAll(threadPools.getAllEventLoops());
         }
 
-//        payloadProcessingExecutor.shutdown();
-//
-//        try {
-//            payloadProcessingExecutor.awaitTermination(10, TimeUnit.SECONDS);
-//        } catch (InterruptedException e) {
-//            log.warn("Failed to shutdown payload processing executor properly", e);
-//        }
+        payloadProcessingExecutor.shutdown();
+
+        try {
+            payloadProcessingExecutor.awaitTermination(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            log.warn("Failed to shutdown payload processing executor properly", e);
+        }
 
         for (EventLoopGroup group : allEventLoopGroups) {
             if (graceful) {
