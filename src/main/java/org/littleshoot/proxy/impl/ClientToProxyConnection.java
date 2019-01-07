@@ -887,8 +887,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         EventLoopGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(channel.eventLoop());
 
-        pipeline.addLast( "bytesReadMonitor", bytesReadMonitor);
-        pipeline.addLast( "bytesWrittenMonitor", bytesWrittenMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
 
         pipeline.addLast("encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
@@ -905,8 +905,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             aggregateContentForFiltering(pipeline, numberOfBytesToBuffer);
         }
 
-        pipeline.addLast( "requestReadMonitor", requestReadMonitor);
-        pipeline.addLast( "responseWrittenMonitor", responseWrittenMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "requestReadMonitor", requestReadMonitor);
+        pipeline.addLast(globalStateWrapperEvenLoop, "responseWrittenMonitor", responseWrittenMonitor);
 
         pipeline.addLast(
                 "idle",
