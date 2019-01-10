@@ -1,11 +1,11 @@
 package org.littleshoot.proxy.impl;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
-public class UpstreamConnectionHandler extends ChannelInboundHandlerAdapter {
+public class UpstreamConnectionHandler extends SimpleChannelInboundHandler<Object> {
 
   private final ClientToProxyConnection clientToProxyConnection;
 
@@ -14,7 +14,7 @@ public class UpstreamConnectionHandler extends ChannelInboundHandlerAdapter {
   }
 
   @Override
-  public void channelRead(ChannelHandlerContext ctx, Object request) {
+  protected void channelRead0(ChannelHandlerContext ctx, Object request) {
     final ConnectionState connectionState =
         clientToProxyConnection.setupUpstreamConnection(((Request)request).getShortCircuitResponse(),
             ((Request)request).getInitialRequest());

@@ -351,58 +351,64 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            final HttpRequest httpRequest = (HttpRequest) msg;
 
-            if (msg instanceof ReferenceCounted) {
+            if (httpRequest instanceof ReferenceCounted) {
                 LOG.debug("Retaining reference counted message");
                 ((ReferenceCounted) msg).retain();
             }
 
-            final HttpRequest httpRequest = (HttpRequest) msg;
-
             if (ProxyUtils.isChunked(httpRequest)) {
-                process(ctx, msg, httpRequest);
+                process(ctx, httpRequest);
             } else {
                 proxyServer.getPayloadProcessorExecutor()
-                    .execute(wrapTask(() -> process(ctx, msg, httpRequest)));
+                    .execute(wrapTask(() -> process(ctx, httpRequest)));
             }
         }
 
-        private void process(ChannelHandlerContext ctx, Object msg, HttpRequest httpRequest) {
+        private void process(ChannelHandlerContext ctx, HttpRequest httpRequest) {
 
-            boolean authenticationRequired = authenticationRequired(httpRequest);
+            boolean authenticationRequired = false;
+            HttpResponse shortCircuitResponse = null;
+            try {
+                authenticationRequired = authenticationRequired(httpRequest);
 
-            if (authenticationRequired) {
-                LOG.debug("Not authenticated!!");
-                become(AWAITING_PROXY_AUTHENTICATION);
-            } else {
-                // Make a copy of the original request
-                final HttpRequest currentRequest = copy(httpRequest);
-
-                // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
-                // should not be filtered), fall back to the default no-op filter source.
-                HttpFilters filterInstance;
-                try {
-                    filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
-                } finally {
-                    // releasing a copied http request
-                    if (currentRequest instanceof ReferenceCounted) {
-                      ((ReferenceCounted) currentRequest).release();
-                    }
-                }
-                if (filterInstance != null) {
-                    currentFilters = filterInstance;
+                if (authenticationRequired) {
+                    LOG.debug("Not authenticated!!");
+                    become(AWAITING_PROXY_AUTHENTICATION);
                 } else {
-                    currentFilters = HttpFiltersAdapter.NOOP_FILTER;
+                    // Make a copy of the original request
+                    final HttpRequest currentRequest = copy(httpRequest);
+
+                    // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
+                    // should not be filtered), fall back to the default no-op filter source.
+                    HttpFilters filterInstance;
+                    try {
+                        filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+                    } finally {
+                        // releasing a copied http request
+                        if (currentRequest instanceof ReferenceCounted) {
+                            ((ReferenceCounted) currentRequest).release();
+                        }
+                    }
+                    if (filterInstance != null) {
+                        currentFilters = filterInstance;
+                    } else {
+                        currentFilters = HttpFiltersAdapter.NOOP_FILTER;
+                    }
+
+                    // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
+                    shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
+
                 }
-
-                // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-                final HttpResponse shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
-
-                if (msg instanceof ReferenceCounted) {
+            } catch (Exception e) {
+                if (httpRequest instanceof ReferenceCounted) {
                     LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) msg).retain();
+                    ((ReferenceCounted) httpRequest).release();
                 }
+            }
 
+            if (!authenticationRequired) {
                 ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
             }
         }

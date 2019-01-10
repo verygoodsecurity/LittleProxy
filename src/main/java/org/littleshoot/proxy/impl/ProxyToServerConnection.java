@@ -250,7 +250,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         return getCurrentState();
     }
 
-    public class RespondToCientHandler extends SimpleChannelInboundHandler {
+    public class RespondToClientHandler extends SimpleChannelInboundHandler {
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
@@ -962,7 +962,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
         pipeline.addLast(globalStateWrapperEvenLoop,  "httpInitialHandler", new HttpInitialHandler<>(this));
-        pipeline.addLast(globalStateWrapperEvenLoop,  "respondToClientHandler", new RespondToCientHandler());
+        pipeline.addLast(globalStateWrapperEvenLoop,  "respondToClientHandler", new RespondToClientHandler());
     }
 
     /**
