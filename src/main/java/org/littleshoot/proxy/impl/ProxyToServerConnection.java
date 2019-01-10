@@ -12,6 +12,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -244,24 +245,32 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         rememberCurrentResponse(httpResponse);
 
-        final HttpResponse resp = httpResponse;
+        ctx.fireChannelRead(httpResponse);
 
-        if (ProxyUtils.isChunked(httpResponse)) {
-            respondWith(resp);
-            return AWAITING_CHUNK;
-        } else {
-            if (resp instanceof ReferenceCounted) {
-              LOG.debug("Retaining reference counted message");
-              ((ReferenceCounted) resp).retain();
+        return getCurrentState();
+    }
+
+    public class RespondToCientHandler extends SimpleChannelInboundHandler {
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+            final HttpResponse httpResponse = (HttpResponse) msg;
+            if (ProxyUtils.isChunked(httpResponse)) {
+                respondWith(httpResponse);
+                become(AWAITING_CHUNK);
+            } else {
+                if (httpResponse instanceof ReferenceCounted) {
+                    LOG.debug("Retaining reference counted message");
+                    ((ReferenceCounted) httpResponse).retain();
+                }
+
+                proxyServer.getPayloadProcessorExecutor()
+                    .execute(clientConnection.wrapTask(() -> {
+                        respondWith(httpResponse);
+                        currentFilters.serverToProxyResponseReceived();
+                        become(AWAITING_INITIAL);
+                    }));
             }
-
-            proxyServer.getPayloadProcessorExecutor()
-                .execute(clientConnection.wrapTask(() -> {
-                  respondWith(resp);
-                  currentFilters.serverToProxyResponseReceived();
-                  super.become(AWAITING_INITIAL);
-                }));
-            return getCurrentState();
         }
     }
 
@@ -952,8 +961,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         }
 
         pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
-        HttpInitialHandler<HttpResponse> httpInitialHandler = new HttpInitialHandler<>(this);
-        pipeline.addLast(globalStateWrapperEvenLoop,  "httpInitialHandler", httpInitialHandler);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "httpInitialHandler", new HttpInitialHandler<>(this));
+        pipeline.addLast(globalStateWrapperEvenLoop,  "respondToClientHandler", new RespondToCientHandler());
     }
 
     /**

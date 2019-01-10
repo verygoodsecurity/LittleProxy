@@ -180,10 +180,6 @@ abstract class ProxyConnection<I extends HttpObject> extends
         }
     }
 
-    private boolean afterPayloadProcessor(ChannelHandlerContext ctx) {
-        return ctx.name().equals("handlerEnd");
-    }
-
     /**
      * Implement this to handle reading the initial object (e.g.
      * {@link HttpRequest} or {@link HttpResponse}).
