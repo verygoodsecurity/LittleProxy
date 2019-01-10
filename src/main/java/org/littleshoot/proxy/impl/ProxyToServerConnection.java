@@ -223,7 +223,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     }
 
     @Override
-    protected ConnectionState readHTTPInitial(ChannelHandlerContext ctx, HttpResponse httpResponse) {
+    protected ConnectionState readHTTPInitial(ChannelHandlerContext ctx, Object httpResponseObj) {
+        HttpResponse httpResponse = (HttpResponse) httpResponseObj;
         LOG.debug("Received raw response: {}", httpResponse);
 
         if (httpResponse.getDecoderResult().isFailure()) {
@@ -951,6 +952,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         }
 
         pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
+        HttpInitialHandler<HttpResponse> httpInitialHandler = new HttpInitialHandler<>(this);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "httpInitialHandler", httpInitialHandler);
     }
 
     /**

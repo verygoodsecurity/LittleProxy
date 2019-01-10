@@ -626,7 +626,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     }
 
     protected ExecutorService getPayloadProcessorExecutor() {
-        return serverGroup.getPayloadProcessingExecutor();
+        return serverGroup.getMessageProcessingExecutor();
     }
 
     protected RequestTracer getRequestTracer() {
@@ -906,9 +906,9 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         }
 
         @Override
-        public HttpProxyServerBootstrap withPyaloadProcessorExecutor(
-            ExecutorService payloadProcessorExecutor) {
-            this.payloadProcessorExecutor = payloadProcessorExecutor;
+        public HttpProxyServerBootstrap withMessageProcessingExecutor(
+            ExecutorService messageProcessorExecutor) {
+            this.payloadProcessorExecutor = messageProcessorExecutor;
             return this;
         }
 

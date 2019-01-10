@@ -58,7 +58,7 @@ public class GlobalStateWrapperEvenLoop implements EventExecutor {
 
   @Override
   public void shutdown() {
-    eventLoop.terminationFuture();
+    eventLoop.shutdown();
   }
 
   @Override

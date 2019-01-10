@@ -245,11 +245,11 @@ public interface HttpProxyServerBootstrap {
 
     /**
      *
-     * @param payloadProcessorExecutor
+     * @param messageProcessorExecutor
      * @return
      */
-    HttpProxyServerBootstrap withPyaloadProcessorExecutor(
-        ExecutorService payloadProcessorExecutor);
+    HttpProxyServerBootstrap withMessageProcessingExecutor(
+        ExecutorService messageProcessorExecutor);
 
     /**
      * <p>

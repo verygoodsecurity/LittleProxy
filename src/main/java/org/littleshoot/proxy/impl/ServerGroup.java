@@ -300,7 +300,7 @@ public class ServerGroup {
         return getThreadPoolsForProtocol(protocol).getProxyToServerWorkerPool();
     }
 
-    public ExecutorService getPayloadProcessingExecutor() {
+    public ExecutorService getMessageProcessingExecutor() {
         return payloadProcessingExecutor;
     }
 

@@ -3,7 +3,6 @@ package org.littleshoot.proxy.impl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -85,7 +84,6 @@ import static org.littleshoot.proxy.impl.ConnectionState.NEGOTIATING_CONNECT;
  * .
  * </p>
  */
-@Sharable
 public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     private static final HttpResponseStatus CONNECTION_ESTABLISHED = new HttpResponseStatus(
             200, "Connection established");
@@ -143,8 +141,6 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private AtomicBoolean authenticated = new AtomicBoolean();
 
-    private HttpResponse clientToProxyResponse;
-
     private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
 
     ClientToProxyConnection(
@@ -188,7 +184,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      **************************************************************************/
 
     @Override
-    protected ConnectionState readHTTPInitial(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+    protected ConnectionState readHTTPInitial(ChannelHandlerContext ctx, Object httpRequestObj) {
+        HttpRequest httpRequest = (HttpRequest) httpRequestObj;
         LOG.debug("Received raw request: {}", httpRequest);
 
         // if we cannot parse the request, immediately return a 400 and close the connection, since we do not know what state
@@ -229,11 +226,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @param httpRequest
      * @return
      */
-    public ConnectionState doReadHTTPInitial(HttpRequest httpRequest) {
-        if (clientToProxyResponse != null) {
-            LOG.debug("Responding to client with short-circuit response from filter: {}", clientToProxyResponse);
+    public ConnectionState setupUpstreamConnection(HttpResponse shortCircuitResponse, HttpRequest httpRequest) {
+        if (shortCircuitResponse != null) {
+            LOG.debug("Responding to client with short-circuit response from filter: {}", shortCircuitResponse);
 
-            boolean keepAlive = respondWithShortCircuitResponse(clientToProxyResponse);
+            boolean keepAlive = respondWithShortCircuitResponse(shortCircuitResponse);
             if (keepAlive) {
                 return AWAITING_INITIAL;
             } else {
@@ -350,25 +347,24 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Sharable
-    protected class ClientPayloadProcessor extends ChannelInboundHandlerAdapter {
+    protected class ClientToProxyMessageProcessor extends ChannelInboundHandlerAdapter {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
 
-          if (msg instanceof ReferenceCounted) {
-            LOG.debug("Retaining reference counted message");
-            ((ReferenceCounted) msg).retain();
-          }
+            if (msg instanceof ReferenceCounted) {
+                LOG.debug("Retaining reference counted message");
+                ((ReferenceCounted) msg).retain();
+            }
 
-          HttpRequest httpRequest = (HttpRequest) msg;
+            final HttpRequest httpRequest = (HttpRequest) msg;
 
-          if (ProxyUtils.isChunked(httpRequest)) {
-              process(ctx, msg, httpRequest);
-          } else {
-              proxyServer.getPayloadProcessorExecutor()
-                  .execute(wrapTask(() -> process(ctx, msg, httpRequest)));
-          }
-
+            if (ProxyUtils.isChunked(httpRequest)) {
+                process(ctx, msg, httpRequest);
+            } else {
+                proxyServer.getPayloadProcessorExecutor()
+                    .execute(wrapTask(() -> process(ctx, msg, httpRequest)));
+            }
         }
 
         private void process(ChannelHandlerContext ctx, Object msg, HttpRequest httpRequest) {
@@ -376,60 +372,59 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             boolean authenticationRequired = authenticationRequired(httpRequest);
 
             if (authenticationRequired) {
-              LOG.debug("Not authenticated!!");
-              become(AWAITING_PROXY_AUTHENTICATION);
+                LOG.debug("Not authenticated!!");
+                become(AWAITING_PROXY_AUTHENTICATION);
             } else {
+                // Make a copy of the original request
+                final HttpRequest currentRequest = copy(httpRequest);
 
-              // Make a copy of the original request
-              final HttpRequest currentRequest = copy(httpRequest);
-
-              // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
-              // should not be filtered), fall back to the default no-op filter source.
-              HttpFilters filterInstance;
-              try {
-                filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
-              } finally {
-                // releasing a copied http request
-                if (currentRequest instanceof ReferenceCounted) {
-                  ((ReferenceCounted) currentRequest).release();
+                // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
+                // should not be filtered), fall back to the default no-op filter source.
+                HttpFilters filterInstance;
+                try {
+                    filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+                } finally {
+                    // releasing a copied http request
+                    if (currentRequest instanceof ReferenceCounted) {
+                      ((ReferenceCounted) currentRequest).release();
+                    }
                 }
-              }
-              if (filterInstance != null) {
-                currentFilters = filterInstance;
-              } else {
-                currentFilters = HttpFiltersAdapter.NOOP_FILTER;
-              }
+                if (filterInstance != null) {
+                    currentFilters = filterInstance;
+                } else {
+                    currentFilters = HttpFiltersAdapter.NOOP_FILTER;
+                }
 
-              // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-              clientToProxyResponse = currentFilters.clientToProxyRequest(httpRequest);
+                // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
+                final HttpResponse shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
 
-              if (msg instanceof ReferenceCounted) {
-                LOG.debug("Retaining reference counted message");
-                ((ReferenceCounted) msg).retain();
-              }
+                if (msg instanceof ReferenceCounted) {
+                    LOG.debug("Retaining reference counted message");
+                    ((ReferenceCounted) msg).retain();
+                }
 
-              ctx.fireChannelRead(httpRequest);
+                ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
             }
         }
     }
 
-  public Runnable wrapTask(Runnable task) {
-    return () -> {
-      if (proxyServer.getGlobalStateHandler() != null) {
-        try {
-          proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
-        } finally {
-          try {
-            task.run();
-          } finally {
-            proxyServer.getGlobalStateHandler().clear();
-          }
-        }
-      } else {
-        task.run();
-      }
-    };
-  }
+    Runnable wrapTask(Runnable task) {
+        return () -> {
+            if (proxyServer.getGlobalStateHandler() != null) {
+                try {
+                    proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
+                } finally {
+                    try {
+                        task.run();
+                    } finally {
+                        proxyServer.getGlobalStateHandler().clear();
+                    }
+                }
+            } else {
+                task.run();
+            }
+        };
+    }
 
     /**
      * Returns true if the specified request is a request to an origin server, rather than to a proxy server. If this
@@ -897,11 +892,11 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
           pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
         }
 
-        pipeline.addLast(globalStateWrapperEvenLoop,  "handlerBegin", this);
-
-        pipeline.addLast(globalStateWrapperEvenLoop,  "clientToProxyProcessor", new ClientPayloadProcessor());
-
-        pipeline.addLast(globalStateWrapperEvenLoop,  "handlerEnd", this);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
+        HttpInitialHandler<HttpRequest> httpInitialHandler = new HttpInitialHandler<>(this);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "httpInitialHandler", httpInitialHandler);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "clientToProxyMessageProcessor", new ClientToProxyMessageProcessor());
+        pipeline.addLast(globalStateWrapperEvenLoop,  "upstreamConnectionHandler", new UpstreamConnectionHandler(this));
 
     }
 
