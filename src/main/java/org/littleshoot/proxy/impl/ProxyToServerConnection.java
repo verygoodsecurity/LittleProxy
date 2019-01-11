@@ -9,10 +9,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -250,10 +250,10 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         return getCurrentState();
     }
 
-    public class RespondToClientHandler extends SimpleChannelInboundHandler {
+    public class RespondToClientHandler extends ChannelInboundHandlerAdapter {
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final HttpResponse httpResponse = (HttpResponse) msg;
             if (ProxyUtils.isChunked(httpResponse)) {
                 respondWith(httpResponse);
@@ -271,6 +271,11 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                         become(AWAITING_INITIAL);
                     }));
             }
+        }
+
+        @Override
+        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            serverConnection.exceptionCaught(cause);
         }
     }
 

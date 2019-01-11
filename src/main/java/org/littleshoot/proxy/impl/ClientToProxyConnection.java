@@ -406,6 +406,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                     LOG.debug("Retaining reference counted message");
                     ((ReferenceCounted) httpRequest).release();
                 }
+                ctx.fireExceptionCaught(e);
             }
 
             if (!authenticationRequired) {

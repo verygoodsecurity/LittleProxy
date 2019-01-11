@@ -17,4 +17,9 @@ public class HttpInitialHandler<T extends HttpObject> extends ChannelInboundHand
     final ConnectionState connectionState = proxyConnection.readHTTPInitial(ctx, msg);
     proxyConnection.become(connectionState);
   }
+
+  @Override
+  public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    proxyConnection.exceptionCaught(cause);
+  }
 }
