@@ -857,6 +857,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private void resetConnectionForRetry() throws UnknownHostException {
         // Remove ourselves as handler on the old context
         this.ctx.pipeline().remove(this);
+        this.ctx.pipeline().remove("httpInitialHandler");
+        this.ctx.pipeline().remove("respondToClientHandler");
         this.ctx.close();
         this.ctx = null;
 
