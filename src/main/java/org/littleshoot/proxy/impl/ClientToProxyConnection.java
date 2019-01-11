@@ -407,6 +407,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                     ((ReferenceCounted) httpRequest).release();
                 }
                 ctx.fireExceptionCaught(e);
+                return;
             }
 
             if (!authenticationRequired) {
