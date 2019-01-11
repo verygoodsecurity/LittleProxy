@@ -212,14 +212,14 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      **************************************************************************/
 
     @Override
-    protected void read(ChannelHandlerContext ctx, Object msg) {
+    protected void read(Object msg) {
         if (isConnecting()) {
             LOG.debug(
                     "In the middle of connecting, forwarding message to connection flow: {}",
                     msg);
             this.connectionFlow.read(msg);
         } else {
-            super.read(ctx, msg);
+            super.read(msg);
         }
     }
 
@@ -925,8 +925,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * @param pipeline
      * @param httpRequest
      */
-    private void initChannelPipeline(ChannelPipeline pipeline,
-            Channel channel) {
+    private void initChannelPipeline(ChannelPipeline pipeline, Channel channel) {
 
         if (proxyServer.getGlobalStateHandler() != null) {
             pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(clientConnection));

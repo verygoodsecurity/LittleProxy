@@ -864,7 +864,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         }
 
         if (proxyServer.getGlobalStateHandler() != null) {
-          pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
+            pipeline.addLast("inboundGlobalStateHandler", new InboundGlobalStateHandler(this));
         }
 
         EventExecutorGroup globalStateWrapperEvenLoop = new GlobalStateWrapperEvenLoop(this);
@@ -896,7 +896,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                         .getIdleConnectionTimeout()));
 
         if (proxyServer.getGlobalStateHandler() != null) {
-          pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
+            pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
         }
 
         pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);

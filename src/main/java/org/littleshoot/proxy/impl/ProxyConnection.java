@@ -108,7 +108,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param msg
      */
-    protected void read(ChannelHandlerContext ctx, Object msg) {
+    protected void read(Object msg) {
         LOG.debug("Reading: {}", msg);
 
         lastReadTime = System.currentTimeMillis();
@@ -118,7 +118,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             readRaw((ByteBuf) msg);
         } else {
             // If not tunneling, then we are always dealing with HttpObjects.
-            readHTTP(ctx, (HttpObject) msg);
+            readHTTP((HttpObject) msg);
         }
     }
 
@@ -128,7 +128,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param httpObject
      */
     @SuppressWarnings("unchecked")
-    private void readHTTP(ChannelHandlerContext ctx, HttpObject httpObject) {
+    private void readHTTP(HttpObject httpObject) {
         switch (getCurrentState()) {
         case AWAITING_INITIAL:
             if (httpObject instanceof HttpMessage) {
@@ -583,7 +583,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
-        read(ctx, msg);
+        read(msg);
     }
 
     @Override
