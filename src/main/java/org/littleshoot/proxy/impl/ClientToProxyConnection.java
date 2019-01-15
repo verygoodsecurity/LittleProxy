@@ -900,7 +900,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(this));
         }
 
-        pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "router", this);
         pipeline.addLast(globalStateWrapperEvenLoop,  "httpInitialHandler", new HttpInitialHandler<>(this));
         pipeline.addLast(globalStateWrapperEvenLoop,  "clientToProxyMessageProcessor", new ClientToProxyMessageProcessor());
         pipeline.addLast(globalStateWrapperEvenLoop,  "upstreamConnectionHandler", new UpstreamConnectionHandler(this));

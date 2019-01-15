@@ -966,7 +966,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             pipeline.addLast("outboundGlobalStateHandler", new OutboundGlobalStateHandler(clientConnection));
         }
 
-        pipeline.addLast(globalStateWrapperEvenLoop,  "handler", this);
+        pipeline.addLast(globalStateWrapperEvenLoop,  "router", this);
         pipeline.addLast(globalStateWrapperEvenLoop,  "httpInitialHandler", new HttpInitialHandler<>(this));
         pipeline.addLast(globalStateWrapperEvenLoop,  "respondToClientHandler", new RespondToClientHandler());
     }
