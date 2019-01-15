@@ -23,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
@@ -79,13 +80,36 @@ public class ServerGroupTest {
 
     @After
     public void tearDown() {
+        firstClientThreadName.set(null);
+        secondClientThreadName.set(null);
+        firstProxyThreadName.set(null);
+        secondProxyThreadName.set(null);
         if (mockServer != null) {
             mockServer.stop();
         }
     }
 
     @Test
-    public void testSingleWorkerThreadPoolConfiguration() throws ExecutionException, InterruptedException {
+    public void testChunkedRequest() throws ExecutionException, InterruptedException {
+
+        final HttpProxyServer proxyServer = getProxy(2, false,
+            false, false, false, false,
+            false, false, false, true);
+
+        final Futures futures = runTwoRequests(proxyServer);
+
+        futures.getFirstFuture().get();
+        futures.getSecondFuture().get();
+
+        assertEquals("Expected clientToProxy filter methods to be executed on the same thread for both requests", firstClientThreadName.get(), secondClientThreadName.get());
+        assertEquals("Expected serverToProxy filter methods to be executed on the same thread for both requests", firstProxyThreadName.get(), secondProxyThreadName.get());
+
+        assertNotEquals(firstClientThreadName.get(), messageProcessingThreadName);
+        assertNotEquals(firstProxyThreadName.get(), messageProcessingThreadName);
+    }
+
+    @Test
+    public void testBlockFirstRequest() throws ExecutionException, InterruptedException {
 
         final HttpProxyServer proxyServer = getProxy(2, true,
             false, false, false, false,
@@ -112,6 +136,102 @@ public class ServerGroupTest {
             futures.getFirstFuture().get(3, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             fail("First request took longer than expected");
+        }
+
+        assertEquals("Expected clientToProxy filter methods to be executed on the same thread for both requests", firstClientThreadName.get(), secondClientThreadName.get());
+        assertEquals("Expected serverToProxy filter methods to be executed on the same thread for both requests", firstProxyThreadName.get(), secondProxyThreadName.get());
+
+        assertEquals(firstClientThreadName.get(), messageProcessingThreadName);
+        assertEquals(firstProxyThreadName.get(), messageProcessingThreadName);
+    }
+
+    @Test
+    public void testBlockFirstResponse() throws ExecutionException, InterruptedException {
+
+        final HttpProxyServer proxyServer = getProxy(2, false,
+            false, true, false, false,
+            false, false, false, false);
+
+        final Futures futures = runTwoRequests(proxyServer);
+
+        try {
+            futures.getSecondFuture().get(2, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            fail("Second request took longer than expected");
+        }
+
+        boolean firstStillExecuting = false;
+        try {
+            futures.getFirstFuture().get(2, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            firstStillExecuting = true;
+        }
+
+        Assert.assertTrue("First request must be still executing", firstStillExecuting);
+
+        try {
+            futures.getFirstFuture().get(3, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            fail("First request took longer than expected");
+        }
+
+        assertEquals("Expected clientToProxy filter methods to be executed on the same thread for both requests", firstClientThreadName.get(), secondClientThreadName.get());
+        assertEquals("Expected serverToProxy filter methods to be executed on the same thread for both requests", firstProxyThreadName.get(), secondProxyThreadName.get());
+
+        assertEquals(firstClientThreadName.get(), messageProcessingThreadName);
+        assertEquals(firstProxyThreadName.get(), messageProcessingThreadName);
+    }
+
+    @Test(expected = ExecutionException.class)
+    public void testExceptionFirstRequest() throws ExecutionException, InterruptedException {
+
+        final HttpProxyServer proxyServer = getProxy(2, false,
+            false, false, false, true,
+            false, false, false, false);
+
+        final Futures futures = runTwoRequests(proxyServer);
+
+        futures.getFirstFuture().get();
+        futures.getSecondFuture().get();
+    }
+
+    @Test
+    public void testBlockFirstRequestSingleProcessingThread() throws ExecutionException, InterruptedException {
+
+        final HttpProxyServer proxyServer = getProxy(1, true,
+            false, false, false, false,
+            false, false, false, false);
+
+        final Futures futures = runTwoRequests(proxyServer);
+
+        boolean secondStillExecuting = false;
+        try {
+            futures.getSecondFuture().get(2, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            secondStillExecuting = true;
+        }
+
+        Assert.assertTrue("Second request must be still executing", secondStillExecuting);
+
+        boolean firstStillExecuting = false;
+        try {
+            futures.getFirstFuture().get(2, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            firstStillExecuting = true;
+        }
+
+        Assert.assertTrue("First request must be still executing", firstStillExecuting);
+
+        try {
+            futures.getFirstFuture().get(3, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            fail("First request took longer than expected");
+        }
+
+        try {
+            futures.getSecondFuture().get(3, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            fail("Second request took longer than expected");
         }
 
         assertEquals("Expected clientToProxy filter methods to be executed on the same thread for both requests", firstClientThreadName.get(), secondClientThreadName.get());
