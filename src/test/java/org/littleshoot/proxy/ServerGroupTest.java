@@ -6,6 +6,7 @@ import org.apache.http.HttpResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.littleshoot.proxy.impl.DefaultHttpProxyServer;
 import org.littleshoot.proxy.impl.ThreadPoolConfiguration;
@@ -188,6 +189,20 @@ public class ServerGroupTest {
         final HttpProxyServer proxyServer = getProxy(2, false,
             false, false, false, true,
             false, false, false, false);
+
+        final Futures futures = runTwoRequests(proxyServer);
+
+        futures.getFirstFuture().get();
+        futures.getSecondFuture().get();
+    }
+
+    @Test(expected = ExecutionException.class)
+    @Ignore // for some reason the test hangs even with original logic
+    public void testExceptionFirstResponse() throws ExecutionException, InterruptedException {
+
+        final HttpProxyServer proxyServer = getProxy(2, false,
+            false, false, false, false,
+            false, true, false, false);
 
         final Futures futures = runTwoRequests(proxyServer);
 
