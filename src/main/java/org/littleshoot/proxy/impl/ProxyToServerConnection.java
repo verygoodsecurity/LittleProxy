@@ -267,15 +267,16 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 proxyServer.getPayloadProcessorExecutor()
                     .execute(clientConnection.wrapTask(() -> {
                       try {
-                        respondWith(httpResponse);
-                        currentFilters.serverToProxyResponseReceived();
-                        become(AWAITING_INITIAL);
+                          respondWith(httpResponse);
+                          currentFilters.serverToProxyResponseReceived();
+                          become(AWAITING_INITIAL);
                       } catch (Exception e) {
-                        if (httpResponse instanceof ReferenceCounted) {
-                          LOG.debug("Retaining reference counted message");
-                          ((ReferenceCounted) httpResponse).release();
-                        }
-                        exceptionCaught(ctx, e);
+                          exceptionCaught(ctx, e);
+                      } finally {
+                          if (httpResponse instanceof ReferenceCounted) {
+                              LOG.debug("Retaining reference counted message");
+                              ((ReferenceCounted) httpResponse).release();
+                          }
                       }
                     }));
             }

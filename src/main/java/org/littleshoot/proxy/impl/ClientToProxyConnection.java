@@ -353,16 +353,27 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final HttpRequest httpRequest = (HttpRequest) msg;
 
-            if (httpRequest instanceof ReferenceCounted) {
-                LOG.debug("Retaining reference counted message");
-                ((ReferenceCounted) msg).retain();
-            }
-
             if (ProxyUtils.isChunked(httpRequest)) {
                 process(ctx, httpRequest);
             } else {
+                if (httpRequest instanceof ReferenceCounted) {
+                    LOG.debug("Retaining reference counted message");
+                    ((ReferenceCounted) msg).retain();
+                }
+
                 proxyServer.getPayloadProcessorExecutor()
-                    .execute(wrapTask(() -> process(ctx, httpRequest)));
+                    .execute(wrapTask(() -> {
+                        try {
+                            process(ctx, httpRequest);
+                        } catch (Exception e) {
+                            ctx.fireExceptionCaught(e);
+                        } finally {
+                            if (httpRequest instanceof ReferenceCounted) {
+                                LOG.debug("Retaining reference counted message");
+                                ((ReferenceCounted) httpRequest).release();
+                            }
+                        }
+                    }));
             }
         }
 
@@ -370,47 +381,43 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
             boolean authenticationRequired = false;
             HttpResponse shortCircuitResponse = null;
-            try {
-                authenticationRequired = authenticationRequired(httpRequest);
+            authenticationRequired = authenticationRequired(httpRequest);
 
-                if (authenticationRequired) {
-                    LOG.debug("Not authenticated!!");
-                    become(AWAITING_PROXY_AUTHENTICATION);
+            if (authenticationRequired) {
+                LOG.debug("Not authenticated!!");
+                become(AWAITING_PROXY_AUTHENTICATION);
+            } else {
+                // Make a copy of the original request
+                final HttpRequest currentRequest = copy(httpRequest);
+
+                // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
+                // should not be filtered), fall back to the default no-op filter source.
+                HttpFilters filterInstance;
+                try {
+                    filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
+                } finally {
+                    // releasing a copied http request
+                    if (currentRequest instanceof ReferenceCounted) {
+                        ((ReferenceCounted) currentRequest).release();
+                    }
+                }
+                if (filterInstance != null) {
+                    currentFilters = filterInstance;
                 } else {
-                    // Make a copy of the original request
-                    final HttpRequest currentRequest = copy(httpRequest);
-
-                    // Set up our filters based on the original request. If the HttpFiltersSource returns null (meaning the request/response
-                    // should not be filtered), fall back to the default no-op filter source.
-                    HttpFilters filterInstance;
-                    try {
-                        filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
-                    } finally {
-                        // releasing a copied http request
-                        if (currentRequest instanceof ReferenceCounted) {
-                            ((ReferenceCounted) currentRequest).release();
-                        }
-                    }
-                    if (filterInstance != null) {
-                        currentFilters = filterInstance;
-                    } else {
-                        currentFilters = HttpFiltersAdapter.NOOP_FILTER;
-                    }
-
-                    // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-                    shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
-
+                    currentFilters = HttpFiltersAdapter.NOOP_FILTER;
                 }
-            } catch (Exception e) {
-                if (httpRequest instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) httpRequest).release();
-                }
-                ctx.fireExceptionCaught(e);
-                return;
+
+                // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
+                shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
+
             }
 
             if (!authenticationRequired) {
+                if (httpRequest instanceof ReferenceCounted) {
+                    LOG.debug("Retaining reference counted message");
+                    ((ReferenceCounted) httpRequest).retain();
+                }
+
                 ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
             }
         }
