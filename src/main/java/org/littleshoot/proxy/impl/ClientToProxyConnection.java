@@ -32,6 +32,7 @@ import org.littleshoot.proxy.ActivityTracker;
 import org.littleshoot.proxy.DefaultFailureHttpResponseComposer;
 import org.littleshoot.proxy.ExceptionHandler;
 import org.littleshoot.proxy.FailureHttpResponseComposer;
+import org.littleshoot.proxy.GlobalStateHandler;
 import org.littleshoot.proxy.ratelimit.RateLimiter;
 import org.littleshoot.proxy.FlowContext;
 import org.littleshoot.proxy.FullFlowContext;
@@ -48,6 +49,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
@@ -147,18 +149,17 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             final DefaultHttpProxyServer proxyServer,
             SslEngineSource sslEngineSource,
             boolean authenticateClients,
-            ChannelPipeline pipeline,
             GlobalTrafficShapingHandler globalTrafficShapingHandler,
             Channel channel) {
         super(AWAITING_INITIAL, proxyServer, false);
 
         this.channel = channel;
 
-        initChannelPipeline(pipeline);
+        initChannelPipeline(channel.pipeline());
 
         if (sslEngineSource != null) {
             LOG.debug("Enabling encryption of traffic from client to proxy");
-            encrypt(pipeline, sslEngineSource.newSslEngine(),
+            encrypt(channel.pipeline(), sslEngineSource.newSslEngine(),
                     authenticateClients)
                     .addListener(
                             new GenericFutureListener<Future<? super Channel>>() {
@@ -361,7 +362,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                     ((ReferenceCounted) msg).retain();
                 }
 
-                proxyServer.getPayloadProcessorExecutor()
+                proxyServer.getMessageProcessingExecutor()
                     .execute(wrapTask(() -> {
                         try {
                             process(ctx, httpRequest);
@@ -425,18 +426,13 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     Runnable wrapTask(Runnable task) {
         return () -> {
-            if (proxyServer.getGlobalStateHandler() != null) {
-                try {
-                    proxyServer.getGlobalStateHandler().restoreFromChannel(channel);
-                } finally {
-                    try {
-                        task.run();
-                    } finally {
-                        proxyServer.getGlobalStateHandler().clear();
-                    }
-                }
-            } else {
+            final Optional<GlobalStateHandler> globalStateHandler =
+                Optional.ofNullable(proxyServer.getGlobalStateHandler());
+            try {
+                globalStateHandler.ifPresent(it -> it.restoreFromChannel(channel));
                 task.run();
+            } finally {
+                globalStateHandler.ifPresent(GlobalStateHandler::clear);
             }
         };
     }

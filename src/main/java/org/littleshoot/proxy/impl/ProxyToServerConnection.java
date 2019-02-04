@@ -264,7 +264,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                     ((ReferenceCounted) httpResponse).retain();
                 }
 
-                proxyServer.getPayloadProcessorExecutor()
+                proxyServer.getMessageProcessingExecutor()
                     .execute(clientConnection.wrapTask(() -> {
                       try {
                           respondWith(httpResponse);

@@ -120,7 +120,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     private final ExceptionHandler proxyToServerExHandler;
     private final RequestTracer requestTracer;
     private final GlobalStateHandler globalStateHandler;
-    private final ExecutorService payloadProcessorExecutor;
     private final HttpFiltersSource filtersSource;
     private final FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer;
     private final boolean transparent;
@@ -259,7 +258,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             ExceptionHandler proxyToServerExHandler,
             RequestTracer requestTracer,
             GlobalStateHandler globalStateHandler,
-            ExecutorService payloadProcessorExecutor,
             HttpFiltersSource filtersSource,
             FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer,
             boolean transparent,
@@ -288,7 +286,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         this.proxyToServerExHandler = proxyToServerExHandler;
         this.requestTracer = requestTracer;
         this.globalStateHandler = globalStateHandler;
-        this.payloadProcessorExecutor = payloadProcessorExecutor;
         this.filtersSource = filtersSource;
         this.unrecoverableFailureHttpResponseComposer = unrecoverableFailureHttpResponseComposer;
         this.transparent = transparent;
@@ -555,7 +552,6 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                         DefaultHttpProxyServer.this,
                         sslEngineSource,
                         authenticateSslClients,
-                        ch.pipeline(),
                         globalTrafficShapingHandler,
                         ch);
             };
@@ -625,7 +621,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         return globalStateHandler;
     }
 
-    protected ExecutorService getPayloadProcessorExecutor() {
+    protected ExecutorService getMessageProcessingExecutor() {
         return serverGroup.getMessageProcessingExecutor();
     }
 
@@ -679,7 +675,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         private ExceptionHandler proxyToServerExHandler = null;
         private RequestTracer requestTracer = null;
         private GlobalStateHandler globalStateHandler = null;
-        private ExecutorService payloadProcessorExecutor = null;
+        private ExecutorService messageProcessorExecutor = null;
         private HttpFiltersSource filtersSource = new HttpFiltersSourceAdapter();
         private FailureHttpResponseComposer unrecoverableFailureHttpResponseComposer = new DefaultFailureHttpResponseComposer();
         private boolean transparent = false;
@@ -908,7 +904,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         @Override
         public HttpProxyServerBootstrap withMessageProcessingExecutor(
             ExecutorService messageProcessorExecutor) {
-            this.payloadProcessorExecutor = messageProcessorExecutor;
+            this.messageProcessorExecutor = messageProcessorExecutor;
             return this;
         }
 
@@ -1028,14 +1024,14 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             }
             else {
                 serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads,
-                    clientToProxyWorkerThreads, proxyToServerWorkerThreads, payloadProcessorExecutor);
+                    clientToProxyWorkerThreads, proxyToServerWorkerThreads, messageProcessorExecutor);
             }
 
             return new DefaultHttpProxyServer(serverGroup,
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManagerFactory,
-                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler, payloadProcessorExecutor,
+                    clientToProxyExHandler, proxyToServerExHandler, requestTracer, globalStateHandler,
                     filtersSource, unrecoverableFailureHttpResponseComposer, transparent,
                     idleConnectionTimeout, activityTrackers, connectTimeout,
                     serverResolver, readThrottleBytesPerSecond, writeThrottleBytesPerSecond,
