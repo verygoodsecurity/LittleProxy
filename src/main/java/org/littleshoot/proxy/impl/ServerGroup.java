@@ -74,7 +74,7 @@ public class ServerGroup {
      */
     private final EnumMap<TransportProtocol, ProxyThreadPools> protocolThreadPools = new EnumMap<TransportProtocol, ProxyThreadPools>(TransportProtocol.class);
 
-    private final ExecutorService payloadProcessingExecutor;
+    private final ExecutorService messageProcessingExecutor;
 
     /**
      * A mapping of selector providers to transport protocols. Avoids special-casing each transport protocol during
@@ -110,16 +110,16 @@ public class ServerGroup {
      */
     public ServerGroup(String name, int incomingAcceptorThreads,
                        int incomingWorkerThreads, int outgoingWorkerThreads,
-                       ExecutorService payloadProcessingExecutor) {
+                       ExecutorService messageProcessingExecutor) {
         this.name = name;
         this.serverGroupId = serverGroupCount.getAndIncrement();
         this.incomingAcceptorThreads = incomingAcceptorThreads;
         this.incomingWorkerThreads = incomingWorkerThreads;
         this.outgoingWorkerThreads = outgoingWorkerThreads;
-        if (payloadProcessingExecutor == null) {
-            this.payloadProcessingExecutor = Executors.newCachedThreadPool();
+        if (messageProcessingExecutor == null) {
+            this.messageProcessingExecutor = Executors.newCachedThreadPool();
         } else {
-            this.payloadProcessingExecutor = payloadProcessingExecutor;
+            this.messageProcessingExecutor = messageProcessingExecutor;
         }
     }
 
@@ -230,13 +230,7 @@ public class ServerGroup {
             allEventLoopGroups.addAll(threadPools.getAllEventLoops());
         }
 
-        payloadProcessingExecutor.shutdown();
-
-        try {
-            payloadProcessingExecutor.awaitTermination(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            log.warn("Failed to shutdown payload processing executor properly", e);
-        }
+        shutdownAndAwaitTermination(messageProcessingExecutor);
 
         for (EventLoopGroup group : allEventLoopGroups) {
             if (graceful) {
@@ -259,6 +253,24 @@ public class ServerGroup {
         }
 
         log.debug("Done shutting down server group");
+    }
+
+    private void shutdownAndAwaitTermination(ExecutorService pool) {
+        pool.shutdown(); // Disable new tasks from being submitted
+        try {
+            // Wait a while for existing tasks to terminate
+            if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+                pool.shutdownNow(); // Cancel currently executing tasks
+                // Wait a while for tasks to respond to being cancelled
+                if (!pool.awaitTermination(60, TimeUnit.SECONDS))
+                    log.warn("Pool did not terminate");
+            }
+        } catch (InterruptedException ie) {
+            // (Re-)Cancel if current thread also interrupted
+            pool.shutdownNow();
+            // Preserve interrupt status
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -301,7 +313,7 @@ public class ServerGroup {
     }
 
     public ExecutorService getMessageProcessingExecutor() {
-        return payloadProcessingExecutor;
+        return messageProcessingExecutor;
     }
 
     /**
