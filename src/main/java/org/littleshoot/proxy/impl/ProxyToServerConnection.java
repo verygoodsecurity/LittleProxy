@@ -1,6 +1,11 @@
 package org.littleshoot.proxy.impl;
 
 import com.google.common.net.HostAndPort;
+
+import com.newrelic.api.agent.NewRelic;
+import com.newrelic.api.agent.Token;
+import com.newrelic.api.agent.Trace;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.buffer.ByteBuf;
@@ -264,21 +269,29 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                     ((ReferenceCounted) httpResponse).retain();
                 }
 
+                final Token token = NewRelic.getAgent().getTransaction().getToken();
+
                 proxyServer.getMessageProcessingExecutor()
-                    .execute(clientConnection.wrapTask(() -> {
-                      try {
-                          respondWith(httpResponse);
-                          currentFilters.serverToProxyResponseReceived();
-                          become(AWAITING_INITIAL);
-                      } catch (Exception e) {
-                          exceptionCaught(ctx, e);
-                      } finally {
-                          if (httpResponse instanceof ReferenceCounted) {
-                              LOG.debug("Retaining reference counted message");
-                              ((ReferenceCounted) httpResponse).release();
-                          }
-                      }
-                    }));
+                    .execute(clientConnection.wrapTask(() ->
+                        processMessage(ctx, httpResponse, token)));
+            }
+        }
+
+        @Trace(async = true)
+        private void processMessage(ChannelHandlerContext ctx, HttpResponse httpResponse, Token token) {
+            try {
+                token.link();
+                respondWith(httpResponse);
+                currentFilters.serverToProxyResponseReceived();
+                become(AWAITING_INITIAL);
+            } catch (Exception e) {
+                exceptionCaught(ctx, e);
+            } finally {
+                if (httpResponse instanceof ReferenceCounted) {
+                    LOG.debug("Retaining reference counted message");
+                    ((ReferenceCounted) httpResponse).release();
+                }
+                token.expire();
             }
         }
 

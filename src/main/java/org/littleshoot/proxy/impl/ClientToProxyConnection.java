@@ -1,5 +1,9 @@
 package org.littleshoot.proxy.impl;
 
+import com.newrelic.api.agent.NewRelic;
+import com.newrelic.api.agent.Token;
+import com.newrelic.api.agent.Trace;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -362,19 +366,26 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                     ((ReferenceCounted) msg).retain();
                 }
 
+                final Token token = NewRelic.getAgent().getTransaction().getToken();
+
                 proxyServer.getMessageProcessingExecutor()
-                    .execute(wrapTask(() -> {
-                        try {
-                            process(ctx, httpRequest);
-                        } catch (Exception e) {
-                            ctx.fireExceptionCaught(e);
-                        } finally {
-                            if (httpRequest instanceof ReferenceCounted) {
-                                LOG.debug("Retaining reference counted message");
-                                ((ReferenceCounted) httpRequest).release();
-                            }
-                        }
-                    }));
+                    .execute(wrapTask(() -> processMessage(ctx, httpRequest, token)));
+            }
+        }
+
+        @Trace(async = true)
+        private void processMessage(ChannelHandlerContext ctx, HttpRequest httpRequest, Token token) {
+            try {
+                token.link();
+                process(ctx, httpRequest);
+            } catch (Exception e) {
+                ctx.fireExceptionCaught(e);
+            } finally {
+                if (httpRequest instanceof ReferenceCounted) {
+                    LOG.debug("Retaining reference counted message");
+                    ((ReferenceCounted) httpRequest).release();
+                }
+                token.expire();
             }
         }
 
