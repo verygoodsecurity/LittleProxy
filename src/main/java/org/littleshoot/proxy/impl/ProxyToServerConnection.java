@@ -37,6 +37,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
@@ -287,10 +288,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             } catch (Exception e) {
                 exceptionCaught(ctx, e);
             } finally {
-                if (httpResponse instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) httpResponse).release();
-                }
+                ReferenceCountUtil.release(httpResponse);
                 token.expire();
             }
         }
@@ -945,7 +943,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
      * {@link HttpObjectAggregator} in the {@link ChannelPipeline}.
      * 
      * @param pipeline
-     * @param httpRequest
+     * @param channel
      */
     private void initChannelPipeline(ChannelPipeline pipeline, Channel channel) {
 
@@ -962,8 +960,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast("encoder", new HttpRequestEncoder());
-        pipeline.addLast("decoder", new HeadAwareHttpResponseDecoder(
+        pipeline.addLast(globalStateWrapperEvenLoop, "encoder", new HttpRequestEncoder());
+        pipeline.addLast(globalStateWrapperEvenLoop, "decoder", new HeadAwareHttpResponseDecoder(
         		proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));

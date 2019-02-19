@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
@@ -361,12 +362,9 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             if (ProxyUtils.isChunked(httpRequest)) {
                 process(ctx, httpRequest);
             } else {
-                if (httpRequest instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) msg).retain();
-                }
-
                 final Token token = NewRelic.getAgent().getTransaction().getToken();
+
+                ReferenceCountUtil.retain(httpRequest);
 
                 proxyServer.getMessageProcessingExecutor()
                     .execute(wrapTask(() -> processMessage(ctx, httpRequest, token)));
@@ -381,10 +379,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             } catch (Exception e) {
                 ctx.fireExceptionCaught(e);
             } finally {
-                if (httpRequest instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) httpRequest).release();
-                }
+                ReferenceCountUtil.release(httpRequest);
                 token.expire();
             }
         }
@@ -425,12 +420,12 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             }
 
             if (!authenticationRequired) {
-                if (httpRequest instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) httpRequest).retain();
+                if (channel.isActive()) { //temporary solution (race condition), working on making it right
+                  ReferenceCountUtil.retain(httpRequest);
+                  ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
+                } else {
+                    LOG.debug("Skipped setting up upstream connection, channel {} is inactive", channel.id());
                 }
-
-                ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
             }
         }
     }
@@ -887,12 +882,12 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesReadMonitor", bytesReadMonitor);
         pipeline.addLast(globalStateWrapperEvenLoop, "bytesWrittenMonitor", bytesWrittenMonitor);
 
-        pipeline.addLast("proxyProtocolReader", new HttpProxyProtocolRequestDecoder());
+        pipeline.addLast(globalStateWrapperEvenLoop, "proxyProtocolReader", new HttpProxyProtocolRequestDecoder());
 
-        pipeline.addLast("encoder", new HttpResponseEncoder());
+        pipeline.addLast(globalStateWrapperEvenLoop, "encoder", new HttpResponseEncoder());
         // We want to allow longer request lines, headers, and chunks
         // respectively.
-        pipeline.addLast("decoder", new HttpRequestDecoder(
+        pipeline.addLast(globalStateWrapperEvenLoop, "decoder", new HttpRequestDecoder(
                 proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
