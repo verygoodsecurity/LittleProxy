@@ -360,7 +360,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             final HttpRequest httpRequest = (HttpRequest) msg;
 
             if (ProxyUtils.isChunked(httpRequest)) {
-                process(ctx, httpRequest);
+                process(ctx, httpRequest, true);
             } else {
                 final Token token = NewRelic.getAgent().getTransaction().getToken();
 
@@ -375,7 +375,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         private void processMessage(ChannelHandlerContext ctx, HttpRequest httpRequest, Token token) {
             try {
                 token.link();
-                process(ctx, httpRequest);
+                process(ctx, httpRequest, false);
             } catch (Exception e) {
                 ctx.fireExceptionCaught(e);
             } finally {
@@ -384,7 +384,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             }
         }
 
-        private void process(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+        private void process(ChannelHandlerContext ctx, HttpRequest httpRequest, boolean chunked) {
 
             boolean authenticationRequired = authenticationRequired(httpRequest);
 
@@ -415,14 +415,18 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
                 final HttpResponse shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
 
-                ReferenceCountUtil.retain(httpRequest);
-                channel.eventLoop().execute(wrapTask(() -> {
-                    try {
-                        ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
-                    } finally {
-                        ReferenceCountUtil.release(httpRequest);
-                    }
-                }));
+                if (chunked) {
+                    ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
+                } else {
+                    ReferenceCountUtil.retain(httpRequest);
+                    channel.eventLoop().execute(wrapTask(() -> {
+                        try {
+                            ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
+                        } finally {
+                            ReferenceCountUtil.release(httpRequest);
+                        }
+                    }));
+                }
             }
         }
     }
