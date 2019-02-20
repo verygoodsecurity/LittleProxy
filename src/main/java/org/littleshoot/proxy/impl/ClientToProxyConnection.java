@@ -386,9 +386,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
         private void process(ChannelHandlerContext ctx, HttpRequest httpRequest) {
 
-            boolean authenticationRequired = false;
-            HttpResponse shortCircuitResponse = null;
-            authenticationRequired = authenticationRequired(httpRequest);
+            boolean authenticationRequired = authenticationRequired(httpRequest);
 
             if (authenticationRequired) {
                 LOG.debug("Not authenticated!!");
@@ -415,17 +413,16 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 }
 
                 // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-                shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
+                final HttpResponse shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
 
-            }
-
-            if (!authenticationRequired) {
-                if (channel.isActive()) { //temporary solution (race condition), working on making it right
-                  ReferenceCountUtil.retain(httpRequest);
-                  ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
-                } else {
-                    LOG.debug("Skipped setting up upstream connection, channel {} is inactive", channel.id());
-                }
+                ReferenceCountUtil.retain(httpRequest);
+                channel.eventLoop().execute(wrapTask(() -> {
+                    try {
+                        ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
+                    } finally {
+                        ReferenceCountUtil.release(httpRequest);
+                    }
+                }));
             }
         }
     }
