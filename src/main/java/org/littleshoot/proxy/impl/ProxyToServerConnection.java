@@ -273,24 +273,26 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 final Token token = NewRelic.getAgent().getTransaction().getToken();
 
                 proxyServer.getMessageProcessingExecutor()
-                    .execute(clientConnection.wrapTask(() ->
-                        processMessage(ctx, httpResponse, token)));
+                    .execute(() -> {
+                        try {
+                            token.link();
+                            clientConnection.wrapTask(() ->
+                            processMessage(httpResponse)).run();
+                        } catch (Exception e) {
+                            exceptionCaught(ctx, e);
+                        } finally {
+                            ReferenceCountUtil.release(httpResponse);
+                            token.expire();
+                        }
+                    });
             }
         }
 
         @Trace(async = true)
-        private void processMessage(ChannelHandlerContext ctx, HttpResponse httpResponse, Token token) {
-            try {
-                token.link();
-                respondWith(httpResponse);
-                currentFilters.serverToProxyResponseReceived();
-                become(AWAITING_INITIAL);
-            } catch (Exception e) {
-                exceptionCaught(ctx, e);
-            } finally {
-                ReferenceCountUtil.release(httpResponse);
-                token.expire();
-            }
+        private void processMessage(HttpResponse httpResponse) {
+            respondWith(httpResponse);
+            currentFilters.serverToProxyResponseReceived();
+            become(AWAITING_INITIAL);
         }
 
         @Override

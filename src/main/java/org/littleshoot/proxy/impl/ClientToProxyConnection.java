@@ -367,21 +367,23 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 ReferenceCountUtil.retain(httpRequest);
 
                 proxyServer.getMessageProcessingExecutor()
-                    .execute(wrapTask(() -> processMessage(ctx, httpRequest, token)));
+                    .execute(() -> {
+                        try {
+                            token.link();
+                            wrapTask(() -> asyncProcess(ctx, httpRequest)).run();
+                        } catch (Exception e) {
+                            ctx.fireExceptionCaught(e);
+                        } finally {
+                            ReferenceCountUtil.release(httpRequest);
+                            token.expire();
+                        }
+                    });
             }
         }
 
         @Trace(async = true)
-        private void processMessage(ChannelHandlerContext ctx, HttpRequest httpRequest, Token token) {
-            try {
-                token.link();
-                process(ctx, httpRequest, false);
-            } catch (Exception e) {
-                ctx.fireExceptionCaught(e);
-            } finally {
-                ReferenceCountUtil.release(httpRequest);
-                token.expire();
-            }
+        private void asyncProcess(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+            process(ctx, httpRequest, false);
         }
 
         private void process(ChannelHandlerContext ctx, HttpRequest httpRequest, boolean chunked) {
