@@ -418,15 +418,25 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 if (chunked) {
                     ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
                 } else {
+                    final Token token = NewRelic.getAgent().getTransaction().getToken();
                     ReferenceCountUtil.retain(httpRequest);
-                    channel.eventLoop().execute(wrapTask(() -> {
-                        try {
-                            ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
-                        } finally {
-                            ReferenceCountUtil.release(httpRequest);
-                        }
-                    }));
+                    channel.eventLoop().execute(() -> asyncUpstream(ctx, httpRequest, shortCircuitResponse, token));
                 }
+            }
+        }
+
+        @Trace(async = true)
+        private void asyncUpstream(ChannelHandlerContext ctx, HttpRequest httpRequest,
+                                   HttpResponse shortCircuitResponse, Token token) {
+            try {
+                token.link();
+                wrapTask(() ->
+                    ctx.fireChannelRead(
+                        new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse))
+                ).run();
+            } finally {
+                ReferenceCountUtil.release(httpRequest);
+                token.expire();
             }
         }
     }
