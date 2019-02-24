@@ -390,7 +390,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                     filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
                 } finally {
                     // releasing a copied http request
-                    ReferenceCountUtil.retain(currentRequest);
+                    ReferenceCountUtil.release(currentRequest);
                 }
                 if (filterInstance != null) {
                     currentFilters = filterInstance;

@@ -4,7 +4,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.util.ReferenceCountUtil;
 
 public class UpstreamConnectionHandler extends ChannelInboundHandlerAdapter {
 
@@ -16,14 +15,10 @@ public class UpstreamConnectionHandler extends ChannelInboundHandlerAdapter {
 
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object request) {
-    try {
-      final ConnectionState connectionState =
-          clientToProxyConnection.setupUpstreamConnection(((Request) request).getShortCircuitResponse(),
-              ((Request) request).getInitialRequest());
-      clientToProxyConnection.become(connectionState);
-    } finally {
-      ReferenceCountUtil.release(((Request) request).getInitialRequest());
-    }
+    final ConnectionState connectionState =
+        clientToProxyConnection.setupUpstreamConnection(((Request) request).getShortCircuitResponse(),
+            ((Request) request).getInitialRequest());
+    clientToProxyConnection.become(connectionState);
   }
 
   @Override
