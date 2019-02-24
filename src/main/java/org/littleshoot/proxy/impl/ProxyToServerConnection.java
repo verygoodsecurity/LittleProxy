@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
@@ -259,26 +260,22 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 respondWith(httpResponse);
                 become(AWAITING_CHUNK);
             } else {
-                if (httpResponse instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) httpResponse).retain();
-                }
+                ReferenceCountUtil.retain(httpResponse);
 
                 proxyServer.getMessageProcessingExecutor()
-                    .execute(clientConnection.wrapTask(() -> {
+                    .execute(() -> {
                       try {
-                          respondWith(httpResponse);
-                          currentFilters.serverToProxyResponseReceived();
-                          become(AWAITING_INITIAL);
+                          clientConnection.wrapTask(() -> {
+                              respondWith(httpResponse);
+                              currentFilters.serverToProxyResponseReceived();
+                              become(AWAITING_INITIAL);
+                          }).run();
                       } catch (Exception e) {
                           exceptionCaught(ctx, e);
                       } finally {
-                          if (httpResponse instanceof ReferenceCounted) {
-                              LOG.debug("Retaining reference counted message");
-                              ((ReferenceCounted) httpResponse).release();
-                          }
+                          ReferenceCountUtil.release(httpResponse);
                       }
-                    }));
+                    });
             }
         }
 

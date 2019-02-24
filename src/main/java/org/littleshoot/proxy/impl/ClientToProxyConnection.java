@@ -22,7 +22,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import io.netty.util.ReferenceCounted;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -355,34 +355,26 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             final HttpRequest httpRequest = (HttpRequest) msg;
 
             if (ProxyUtils.isChunked(httpRequest)) {
-                process(ctx, httpRequest);
+                process(ctx, httpRequest, true);
             } else {
-                if (httpRequest instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) msg).retain();
-                }
+                ReferenceCountUtil.retain(httpRequest);
 
                 proxyServer.getMessageProcessingExecutor()
-                    .execute(wrapTask(() -> {
+                    .execute(() -> {
                         try {
-                            process(ctx, httpRequest);
+                            wrapTask(() -> process(ctx, httpRequest, false)).run();
                         } catch (Exception e) {
                             ctx.fireExceptionCaught(e);
                         } finally {
-                            if (httpRequest instanceof ReferenceCounted) {
-                                LOG.debug("Retaining reference counted message");
-                                ((ReferenceCounted) httpRequest).release();
-                            }
+                            ReferenceCountUtil.release(httpRequest);
                         }
-                    }));
+                    });
             }
         }
 
-        private void process(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+        private void process(ChannelHandlerContext ctx, HttpRequest httpRequest, boolean chunked) {
 
-            boolean authenticationRequired = false;
-            HttpResponse shortCircuitResponse = null;
-            authenticationRequired = authenticationRequired(httpRequest);
+            boolean authenticationRequired = authenticationRequired(httpRequest);
 
             if (authenticationRequired) {
                 LOG.debug("Not authenticated!!");
@@ -398,9 +390,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                     filterInstance = proxyServer.getFiltersSource().filterRequest(currentRequest, ctx);
                 } finally {
                     // releasing a copied http request
-                    if (currentRequest instanceof ReferenceCounted) {
-                        ((ReferenceCounted) currentRequest).release();
-                    }
+                    ReferenceCountUtil.retain(currentRequest);
                 }
                 if (filterInstance != null) {
                     currentFilters = filterInstance;
@@ -409,17 +399,24 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                 }
 
                 // Send the request through the clientToProxyRequest filter, and respond with the short-circuit response if required
-                shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
+                final HttpResponse shortCircuitResponse = currentFilters.clientToProxyRequest(httpRequest);
 
-            }
-
-            if (!authenticationRequired) {
-                if (httpRequest instanceof ReferenceCounted) {
-                    LOG.debug("Retaining reference counted message");
-                    ((ReferenceCounted) httpRequest).retain();
+                if (chunked) {
+                    ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
+                } else {
+                    ReferenceCountUtil.retain(httpRequest);
+                    channel.eventLoop().execute(() -> {
+                        try {
+                            wrapTask(() ->
+                                ctx.fireChannelRead(
+                                    new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse))
+                            ).run();
+                        } finally {
+                            ReferenceCountUtil.release(httpRequest);
+                        }
+                    });
                 }
 
-                ctx.fireChannelRead(new UpstreamConnectionHandler.Request(httpRequest, shortCircuitResponse));
             }
         }
     }
