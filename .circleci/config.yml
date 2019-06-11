@@ -64,6 +64,12 @@ jobs:
           name: Run test
           command: |
             unset AWS_ACCESS_KEY_ID; unset AWS_SECRET_ACCESS_KEY; ./scripts/run_circle_tests.sh
+      - run:
+          name: Collect Licenses
+          command: unset AWS_ACCESS_KEY_ID; unset AWS_SECRET_ACCESS_KEY; mvn license:aggregate-third-party-report
+      - store_artifacts:
+          path: target/site/aggregate-third-party-report.html
+
   deployment:
     <<: *job-defaults
     machine:
