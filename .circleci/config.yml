@@ -53,6 +53,34 @@ jobs:
             unset AWS_ACCESS_KEY_ID; unset AWS_SECRET_ACCESS_KEY; mvn clean dependency:go-offline install -Dmaven.test.skip=true --threads 5 -B
       - <<: *save-maven-cache
       - <<: *persist-workspace
+  # Validates that all PRs that are part of a release have links to ClubHouse work items on them.
+  validate-production:
+    <<: *job-defaults
+    docker:
+    - image: docker:17.05.0-ce-git
+    steps:
+    - checkout
+    - setup_remote_docker
+    - run:
+        name: Validate a production build
+        command: |
+          docker login -u="$QUAY_DOCKER_LOGIN" -p="$QUAY_DOCKER_LOGIN_PASSWORD" quay.io
+          docker run -e GITHUB_API_TOKEN=$GITHUB_API_TOKEN quay.io/verygoodsecurity/ghch:$GHCH_VERSION validate --repo-name verygoodsecurity/$CIRCLE_PROJECT_REPONAME --tag-name $CIRCLE_TAG --tag-regex "(.*)"
+
+  # Marks all linked ClubHouse work items as complete.
+  complete-production:
+    <<: *job-defaults
+    docker:
+    - image: docker:17.05.0-ce-git
+    steps:
+    - checkout
+    - setup_remote_docker
+    - run:
+        name: Complete a production build
+        command: |
+          docker login -u="$QUAY_DOCKER_LOGIN" -p="$QUAY_DOCKER_LOGIN_PASSWORD" quay.io
+          docker run -e GITHUB_API_TOKEN=$GITHUB_API_TOKEN -e CLUBHOUSE_API_TOKEN=$CLUBHOUSE_API_TOKEN quay.io/verygoodsecurity/ghch:$GHCH_VERSION complete --repo-name verygoodsecurity/$CIRCLE_PROJECT_REPONAME --tag-name $CIRCLE_TAG --tag-regex "(.*)"
+
   test:
     <<: *job-defaults
     machine:
@@ -133,12 +161,29 @@ workflows:
           filters:
             branches:
               only: vgs-edition
+      - validate-production:
+          context: ghch
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
       - release:
           context: artifact-publisher
           requires:
             - test
+            - validate-production
           filters:
             branches:
               ignore: /.*/
             tags:
               only: /.*/
+      - complete-production:
+          context: ghch
+          requires:
+            - release
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
