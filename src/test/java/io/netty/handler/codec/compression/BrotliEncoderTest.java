@@ -26,7 +26,7 @@ public class BrotliEncoderTest extends AbstractEncoderTest {
     compressed.readBytes(compressedArray);
     compressed.release();
 
-    byte[] decompressed = BrotliDecoder.decode(compressedArray);
+    byte[] decompressed = BrotliDecoder.decompress(compressedArray);
     return Unpooled.wrappedBuffer(decompressed);
   }
 }
