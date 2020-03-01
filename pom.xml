@@ -1,12 +1,15 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.littleshoot</groupId>
     <artifactId>littleproxy</artifactId>
     <packaging>jar</packaging>
-    <version>1.1.17-VGS-SNAPSHOT</version>
+    <version>1.1.18-VGS-SNAPSHOT</version>
     <name>LittleProxy</name>
     <description>
-        LittleProxy is a high performance HTTP proxy written in Java and using the Netty networking framework.
+        LittleProxy is a high performance HTTP proxy written in Java and using the Netty networking
+        framework.
     </description>
     <url>http://littleproxy.org</url>
 
@@ -19,6 +22,7 @@
         <java.version>1.8</java.version>
         <java.version.major>8</java.version.major>
         <dataprovider.version>1.10.0</dataprovider.version>
+        <jvmbrotli.version>0.2.0</jvmbrotli.version>
         <license-maven-plugin.version>1.20</license-maven-plugin.version>
     </properties>
 
@@ -368,6 +372,12 @@
             <version>${slf4j.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.nixxcode.jvmbrotli</groupId>
+            <artifactId>jvmbrotli</artifactId>
+            <version>${jvmbrotli.version}</version>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -613,8 +623,10 @@
                         <versionTagPrefix></versionTagPrefix>
                     </gitFlowConfig>
                     <commitMessages>
-                        <releaseStartMessage>update versions for @{version} release</releaseStartMessage>
-                        <releaseFinishMessage>update for next development version @{version}</releaseFinishMessage>
+                        <releaseStartMessage>update versions for @{version} release
+                        </releaseStartMessage>
+                        <releaseFinishMessage>update for next development version @{version}
+                        </releaseFinishMessage>
                     </commitMessages>
                 </configuration>
             </plugin>
@@ -650,12 +662,14 @@
                             </filters>
 
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>org.littleshoot.proxy.Launcher</Main-Class>
                                     </manifestEntries>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
                                     <resource>log4j.xml</resource>
                                     <file>src/main/config/log4j.xml</file>
                                 </transformer>
@@ -833,7 +847,9 @@
             <email>a@littleshoot.org</email>
             <organization>LittleShoot</organization>
             <organizationUrl>http://www.littleshoot.org/</organizationUrl>
-            <roles><role>Developer</role></roles>
+            <roles>
+                <role>Developer</role>
+            </roles>
             <timezone>-5</timezone>
         </developer>
 
@@ -843,7 +859,9 @@
             <email>ox@getlantern.org</email>
             <organization>GetLantern</organization>
             <organizationUrl>https://www.getlantern.org/</organizationUrl>
-            <roles><role>Developer</role></roles>
+            <roles>
+                <role>Developer</role>
+            </roles>
             <timezone>-5</timezone>
         </developer>
     </developers>
