@@ -49,23 +49,26 @@ public class BrotliDecoder extends ByteToMessageDecoder {
 
   @Override
   protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-    // use in.alloc().buffer() instead of Unpooled.buffer() as best practice
+    /*
+       use in.alloc().buffer() instead of Unpooled.buffer() as best practice.
+       See: https://github.com/netty/netty/wiki/New-and-noteworthy-in-4.0#pooled-buffers
+    */
     try (ByteBufOutputStream output = new ByteBufOutputStream(in.alloc().buffer())) {
       try (BrotliInputStream brotliInputStream = new BrotliInputStream(new ByteBufInputStream(in))) {
-        byte[] bytes = new byte[BROTLI_MAX_NUMBER_OF_BLOCK_TYPES];
+        byte[] decompressBuffer = new byte[BROTLI_MAX_NUMBER_OF_BLOCK_TYPES];
         // is the stream ready for us to decompress?
-        int read = 0;
+        int bytesRead = 0;
         try {
-          read = brotliInputStream.read(bytes);
+          bytesRead = brotliInputStream.read(decompressBuffer);
         } catch (IOException e) {
           // unexpected end of input, not ready to decompress, so just return
           return;
         }
         // continue reading until we have hit EOF
-        while (read > -1) { // -1 means EOF
-          output.write(bytes);
-          Arrays.fill(bytes, (byte) 0);
-          read = brotliInputStream.read(bytes);
+        while (bytesRead > -1) { // -1 means EOF
+          output.write(decompressBuffer);
+          Arrays.fill(decompressBuffer, (byte) 0);
+          bytesRead = brotliInputStream.read(decompressBuffer);
         }
       } catch (IOException e) {
         log.error("Unhandled exception when decompressing brotli", e);
