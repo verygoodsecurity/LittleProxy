@@ -31,6 +31,12 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/*
+Heavily modified from Netty. Found here:
+
+   https://github.com/netty/netty/blob/4.1/codec/src/test/java/io/netty/handler/codec/compression/AbstractEncoderTest.java
+
+ */
 @RunWith(Theories.class)
 public abstract class AbstractEncoderTest extends AbstractCompressionTest {
 
@@ -78,21 +84,12 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         testCompression(data);
     }
 
-//    @Theory
-//    public void testCompressionOfBatchedFlowOfData(@FromDataPoints("largeData") ByteBuf data) throws Exception {
-//        testCompressionOfBatchedFlow(data);
-//    }
-
-    protected void testCompression(final ByteBuf data) throws Exception {
-        final int dataLength = data.readableBytes();
-        assertTrue(channel.writeOutbound(data.retain()));
-        assertTrue(channel.finish());
-
-        ByteBuf decompressed = readDecompressed(dataLength);
-        assertEquals(data.resetReaderIndex(), decompressed);
-
-        decompressed.release();
-        data.release();
+/*
+    // TODO: Until I have some time to figure out how to batch compress, I will ignore this since
+    //       brotli is faster on decompression and is CPU-intensive for compression.
+    @Theory
+    public void testCompressionOfBatchedFlowOfData(@FromDataPoints("largeData") ByteBuf data) throws Exception {
+        testCompressionOfBatchedFlow(data);
     }
 
     protected void testCompressionOfBatchedFlow(final ByteBuf data) throws Exception {
@@ -110,6 +107,19 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
 
         ByteBuf decompressed = readDecompressed(dataLength);
         assertEquals(data, decompressed);
+
+        decompressed.release();
+        data.release();
+    }
+*/
+
+    protected void testCompression(final ByteBuf data) throws Exception {
+        final int dataLength = data.readableBytes();
+        assertTrue(channel.writeOutbound(data.retain()));
+        assertTrue(channel.finish());
+
+        ByteBuf decompressed = readDecompressed(dataLength);
+        assertEquals(data.resetReaderIndex(), decompressed);
 
         decompressed.release();
         data.release();
