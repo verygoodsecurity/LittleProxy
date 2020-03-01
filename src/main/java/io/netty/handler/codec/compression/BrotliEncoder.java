@@ -15,9 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.nixxcode.jvmbrotli.common.BrotliLoader;
 import com.nixxcode.jvmbrotli.enc.BrotliOutputStream;
 import com.nixxcode.jvmbrotli.enc.Encoder;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 import io.netty.buffer.ByteBuf;
@@ -34,10 +36,12 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
   private static final InternalLogger log =
       InternalLoggerFactory.getInstance(BrotliEncoder.class);
 
-  private static final int BROTLI_MAX_NUMBER_OF_BLOCK_TYPES = 256;
-
   private final boolean preferDirect;
   private final int compressionQuality;
+
+  static {
+    BrotliLoader.isBrotliAvailable();
+  }
 
   /*
    If the Brotli encoding is being used to compress streams in real-time,
@@ -63,6 +67,23 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     this.compressionQuality = compressionQuality;
   }
 
+  public byte[] compress(byte[] uncompressed) throws IOException {
+    if (uncompressed == null) {
+      return null;
+    }
+    try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+      Encoder.Parameters params = new Encoder.Parameters().setQuality(this.compressionQuality);
+      try (BrotliOutputStream brotliOutputStream = new BrotliOutputStream(out, params)) {
+        brotliOutputStream.write(uncompressed);
+        brotliOutputStream.flush();
+      } catch (IOException e) {
+        log.error("Unhandled exception when compressing brotli", e);
+        throw e;
+      }
+      return out.toByteArray();
+    }
+  }
+
   @Override
   protected void encode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out) throws Exception {
     ByteBufOutputStream dst = new ByteBufOutputStream(uncompressed.alloc().buffer());
@@ -77,7 +98,7 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         out.writeBytes(dst.buffer());
       }
     } catch (IOException e) {
-      log.error("Unhandled exception when decompressing brotli", e);
+      log.error("Unhandled exception when compressing brotli", e);
       throw e;
     }
 

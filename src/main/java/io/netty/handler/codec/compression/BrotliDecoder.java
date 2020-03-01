@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.nixxcode.jvmbrotli.common.BrotliLoader;
 import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
 
 import java.io.ByteArrayInputStream;
@@ -40,6 +41,10 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   private static final InternalLogger log =
       InternalLoggerFactory.getInstance(BrotliDecoder.class);
 
+  static {
+    BrotliLoader.isBrotliAvailable();
+  }
+
   /*
   For how this value is derived, please see: `BROTLI_MAX_NUMBER_OF_BLOCK_TYPES` in these docs:
      - https://github.com/google/brotli/blob/master/c/common/constants.h
@@ -50,7 +55,7 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   public BrotliDecoder() {
   }
 
-  public static byte[] decode(byte[] compressedArray) throws IOException {
+  public static byte[] decompress(byte[] compressedArray) throws IOException {
     if(compressedArray == null) {
       return null;
     }
