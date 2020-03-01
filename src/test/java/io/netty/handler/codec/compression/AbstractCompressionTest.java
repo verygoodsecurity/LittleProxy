@@ -17,6 +17,13 @@ package io.netty.handler.codec.compression;
 
 import java.util.Random;
 
+/*
+This is a helper class that Netty uses in their test sources for building the sample data buffers
+to test their compression and decompression codecs. The latest version can be found here:
+
+   https://github.com/netty/netty/blob/4.1/codec/src/test/java/io/netty/handler/codec/compression/AbstractCompressionTest.java
+
+ */
 public abstract class AbstractCompressionTest {
 
     protected static final Random rand;
