@@ -1,0 +1,77 @@
+/*
+ * Copyright 2013 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.handler.codec.compression;
+
+import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+/**
+ * Decompress a {@link ByteBuf} using the inflate algorithm.
+ */
+public class BrotliDecoder extends ByteToMessageDecoder {
+
+  private static final InternalLogger log =
+      InternalLoggerFactory.getInstance(BrotliDecoder.class);
+
+  /*
+  For how this value is derived, please see: `BROTLI_MAX_NUMBER_OF_BLOCK_TYPES` in these docs:
+     - https://github.com/google/brotli/blob/master/c/common/constants.h
+     - https://tools.ietf.org/html/draft-vandevenne-shared-brotli-format-01
+   */
+  private static int BROTLI_MAX_NUMBER_OF_BLOCK_TYPES = 256;
+
+  public BrotliDecoder() {
+  }
+
+  @Override
+  protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    // use in.alloc().buffer() instead of Unpooled.buffer() as best practice
+    try (ByteBufOutputStream output = new ByteBufOutputStream(in.alloc().buffer())) {
+      try (BrotliInputStream brotliInputStream = new BrotliInputStream(new ByteBufInputStream(in))) {
+        byte[] bytes = new byte[BROTLI_MAX_NUMBER_OF_BLOCK_TYPES];
+        // is the stream ready for us to decompress?
+        int read = 0;
+        try {
+          read = brotliInputStream.read(bytes);
+        } catch (IOException e) {
+          // unexpected end of input, not ready to decompress, so just return
+          return;
+        }
+        // continue reading until we have hit EOF
+        while (read > -1) { // -1 means EOF
+          output.write(bytes);
+          Arrays.fill(bytes, (byte) 0);
+          read = brotliInputStream.read(bytes);
+        }
+      } catch (IOException e) {
+        log.error("Unhandled exception when decompressing brotli", e);
+        throw e;
+      }
+      out.add(output.buffer());
+    }
+  }
+}
