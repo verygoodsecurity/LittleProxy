@@ -17,7 +17,10 @@ package io.netty.handler.codec.compression;
 
 import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -47,6 +50,24 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   public BrotliDecoder() {
   }
 
+  public static byte[] decode(byte[] compressedArray) throws IOException {
+    if(compressedArray == null) {
+      return null;
+    }
+
+    ByteArrayOutputStream out;
+    try (BrotliInputStream is = new BrotliInputStream(new ByteArrayInputStream(compressedArray))) {
+      out = new ByteArrayOutputStream();
+      if (!decompress(out, is)) {
+        return out.toByteArray();
+      }
+    } catch (IOException e) {
+      log.error("Unhandled exception when decompressing brotli", e);
+      throw e;
+    }
+    return out.toByteArray();
+  }
+
   @Override
   protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
     /*
@@ -55,26 +76,31 @@ public class BrotliDecoder extends ByteToMessageDecoder {
     */
     try (ByteBufOutputStream output = new ByteBufOutputStream(in.alloc().buffer())) {
       try (BrotliInputStream brotliInputStream = new BrotliInputStream(new ByteBufInputStream(in))) {
-        byte[] decompressBuffer = new byte[BROTLI_MAX_NUMBER_OF_BLOCK_TYPES];
-        // is the stream ready for us to decompress?
-        int bytesRead = 0;
-        try {
-          bytesRead = brotliInputStream.read(decompressBuffer);
-        } catch (IOException e) {
-          // unexpected end of input, not ready to decompress, so just return
-          return;
-        }
-        // continue reading until we have hit EOF
-        while (bytesRead > -1) { // -1 means EOF
-          output.write(decompressBuffer);
-          Arrays.fill(decompressBuffer, (byte) 0);
-          bytesRead = brotliInputStream.read(decompressBuffer);
-        }
+        if (!decompress(output, brotliInputStream)) return;
       } catch (IOException e) {
         log.error("Unhandled exception when decompressing brotli", e);
         throw e;
       }
       out.add(output.buffer());
     }
+  }
+
+  private static boolean decompress(OutputStream output, BrotliInputStream brotliInputStream) throws IOException {
+    byte[] decompressBuffer = new byte[BROTLI_MAX_NUMBER_OF_BLOCK_TYPES];
+    // is the stream ready for us to decompress?
+    int bytesRead = 0;
+    try {
+      bytesRead = brotliInputStream.read(decompressBuffer);
+    } catch (IOException e) {
+      // unexpected end of input, not ready to decompress, so just return
+      return false;
+    }
+    // continue reading until we have hit EOF
+    while (bytesRead > -1) { // -1 means EOF
+      output.write(decompressBuffer);
+      Arrays.fill(decompressBuffer, (byte) 0);
+      bytesRead = brotliInputStream.read(decompressBuffer);
+    }
+    return true;
   }
 }
