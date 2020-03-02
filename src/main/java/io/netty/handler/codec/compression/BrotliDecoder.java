@@ -64,7 +64,7 @@ public class BrotliDecoder extends ByteToMessageDecoder {
     try (BrotliInputStream is = new BrotliInputStream(new ByteArrayInputStream(compressedArray))) {
       out = new ByteArrayOutputStream();
       if (!decompress(out, is)) {
-        return out.toByteArray();
+        return null;
       }
     } catch (IOException e) {
       log.error("Unhandled exception when decompressing brotli", e);
