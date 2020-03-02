@@ -38,6 +38,7 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
   private final boolean preferDirect;
   private final int compressionQuality;
+  private final int windowSize;
 
   static {
     BrotliLoader.isBrotliAvailable();
@@ -49,22 +50,34 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
   */
   private static final int DEFAULT_COMPRESSION_QUALITY = 4;
 
+  /*
+   If the Brotli encoding is being used to compress streams in real-time,
+   it is not advisable to have a quality setting above 4 due to performance.
+  */
+  private static final int DEFAULT_WINDOW_SIZE = -1;
+
+
   public BrotliEncoder() {
-    this(true, DEFAULT_COMPRESSION_QUALITY);
+    this(true, DEFAULT_COMPRESSION_QUALITY, DEFAULT_WINDOW_SIZE);
   }
 
   public BrotliEncoder(int quality) {
-    this(true, quality);
+    this(true, quality, DEFAULT_WINDOW_SIZE);
+  }
+
+  public BrotliEncoder(int quality, int windowSize) {
+    this(true, quality, windowSize);
   }
 
   public BrotliEncoder(boolean preferDirect) {
-    this(preferDirect, DEFAULT_COMPRESSION_QUALITY);
+    this(preferDirect, DEFAULT_COMPRESSION_QUALITY, DEFAULT_WINDOW_SIZE);
   }
 
-  public BrotliEncoder(boolean preferDirect, int compressionQuality) {
+  public BrotliEncoder(boolean preferDirect, int compressionQuality, int windowSize) {
     super(preferDirect);
     this.preferDirect = preferDirect;
     this.compressionQuality = compressionQuality;
+    this.windowSize = windowSize;
   }
 
   public byte[] compress(byte[] uncompressed) throws IOException {
@@ -72,7 +85,9 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
       return null;
     }
     try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-      Encoder.Parameters params = new Encoder.Parameters().setQuality(this.compressionQuality);
+      Encoder.Parameters params = new Encoder.Parameters()
+          .setQuality(this.compressionQuality)
+          .setWindow(this.windowSize);
       try (BrotliOutputStream brotliOutputStream = new BrotliOutputStream(out, params)) {
         brotliOutputStream.write(uncompressed);
         brotliOutputStream.flush();
