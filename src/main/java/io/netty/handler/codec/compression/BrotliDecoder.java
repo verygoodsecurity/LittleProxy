@@ -93,7 +93,7 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   private static boolean decompress(OutputStream output, BrotliInputStream brotliInputStream) throws IOException {
     byte[] decompressBuffer = new byte[BROTLI_MAX_NUMBER_OF_BLOCK_TYPES];
     // is the stream ready for us to decompress?
-    int bytesRead = 0;
+    int bytesRead;
     try {
       bytesRead = brotliInputStream.read(decompressBuffer);
     } catch (IOException e) {
@@ -102,7 +102,7 @@ public class BrotliDecoder extends ByteToMessageDecoder {
     }
     // continue reading until we have hit EOF
     while (bytesRead > -1) { // -1 means EOF
-      output.write(decompressBuffer);
+      output.write(decompressBuffer, 0, bytesRead);
       Arrays.fill(decompressBuffer, (byte) 0);
       bytesRead = brotliInputStream.read(decompressBuffer);
     }
