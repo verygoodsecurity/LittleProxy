@@ -47,6 +47,7 @@ import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
@@ -58,6 +59,7 @@ import io.netty.handler.codec.compression.BrotliDecoder;
 import static java.lang.Float.parseFloat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class BrotliEncoderDecoderTest extends AbstractProxyTest {
 
@@ -93,7 +95,7 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
         .start();
   }
 
-  private static final Logger log = LoggerFactory.getLogger(EndToEndStoppingTest.class);
+  private static final Logger log = LoggerFactory.getLogger(BrotliEncoderDecoderTest.class);
 
   static class BrotliDecompressingEntity extends DecompressingEntity {
     BrotliDecompressingEntity(HttpEntity entity) {
@@ -330,7 +332,7 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
   }
 
   @Test
-  public void testGetWithProxySettings() {
+  public void testGetWithProxySettings() throws IOException, URISyntaxException {
     // Note: we use 127.0.0.1 here because on OS X, using straight up
     // localhost yields a connect exception.
     final HttpHost proxyHost = new HttpHost(
@@ -339,14 +341,90 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
         "http");
     HttpClientBuilder clientBuilder = HttpClientBuilder.create();
     RequestConfig.Builder reqBuilder = RequestConfig.custom();
-    init(clientBuilder, reqBuilder, proxyHost, null);
+    init(clientBuilder, reqBuilder, proxyHost, null, true);
+    try (CloseableHttpClient httpclient = clientBuilder.build()) {
+      HttpResponse response = runBrotliScenarioWithClient(httpclient);
+      String str = EntityUtils.toString(response.getEntity());
+      assertArrayEquals(loadUncompressedSample(), str.getBytes());
+    }
+  }
+
+  @Test
+  public void testProxiedGet() throws Exception {
+    this.proxyServer.stop();
+    this.proxyServer = bootstrapProxy()
+        .withPort(0)
+        .start();
+
+    HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+    RequestConfig.Builder reqBuilder = RequestConfig.custom();
+
+//    init(clientBuilder, reqBuilder, null, null, true);
+//    String unproxiedResponse;
+//
+//    List<Header> unproxiedHeaders;
+//    try (CloseableHttpClient httpclient = clientBuilder.build()) {
+//      HttpResponse response = runBrotliScenarioWithClient(httpclient);
+//      unproxiedHeaders = Arrays.asList(response.getAllHeaders());
+//      unproxiedResponse = EntityUtils.toString(response.getEntity());
+//      assertArrayEquals(loadUncompressedSample(), unproxiedResponse.getBytes());
+//    }
+//
+    clientBuilder = HttpClientBuilder.create();
+    reqBuilder = RequestConfig.custom();
+    HttpHost proxyHost = new HttpHost(
+        "127.0.0.1",
+        this.proxyServer.getListenAddress().getPort(), "http");
+    init(clientBuilder, reqBuilder, proxyHost, null, false);
+
+    String proxiedResponse;
+    List<Header> proxiedHeaders;
+    HttpHost _oldWebHost = this.webHost;
+    this.webHost = new HttpHost("127.0.0.1", 3333, "http");
+    try (CloseableHttpClient httpclient = clientBuilder.addInterceptorFirst(this::supportBrotliEncoding).build()) {
+      HttpEntity responseEntity;
+      URL textFileUrl = new URL(webHost + "/brotli/a100.txt");
+      HttpGet httpget = new HttpGet(textFileUrl.toURI());
+      log.info("Executing request " + httpget.getRequestLine());
+      try (CloseableHttpResponse response = httpclient.execute(httpget)) {
+        Assert.assertEquals(response.getStatusLine().getStatusCode(), HttpURLConnection.HTTP_OK);
+        responseEntity = response.getEntity();
+        Assert.assertNotNull(responseEntity);
+        assertNotNull(response.getHeaders(HttpHeaders.CONTENT_ENCODING));
+        Header contentEncoding = response.getFirstHeader(HttpHeaders.CONTENT_ENCODING);
+        assertEquals(contentEncoding.getValue(), BrotliHandler.BROTLI_HTTP_CONTENT_CODING);
+        proxiedHeaders = Arrays.asList(response.getAllHeaders());
+        proxiedResponse = EntityUtils.toString(response.getEntity());
+      }
+//      assertArrayEquals(loadUncompressedSample(), unproxiedResponse.getBytes());
+    }
+    this.webHost = _oldWebHost;
+//    /*
+//    ****
+//    Content-Encoding: br
+//    Content-Type: br
+//    Content-Length: 10
+//    Server: Jetty(8.1.17.v20150415)
+//    Via: 1.1 gauss.local
+//    date: Tue, 3 Mar 2020 21:21:36 GMT
+//    ----
+//    Content-Encoding: br
+//    Content-Type: br
+//    Content-Length: 10
+//    Server: Jetty(8.1.17.v20150415)
+//     */
+//    Sets.SetView<Header> difference = Sets.difference(Sets.newHashSet(proxiedHeaders), Sets.newHashSet(unproxiedHeaders));
+//    log.info(difference.toString());
+//    assertArrayEquals(unproxiedResponse.getBytes(), proxiedResponse.getBytes());
+//    log.info("here");
   }
 
   public void init(
       final HttpClientBuilder clientBuilder,
       final RequestConfig.Builder requestConfigBuilder,
       final HttpHost proxyHost,
-      final CredentialsProvider proxyAuth) {
+      final CredentialsProvider proxyAuth,
+      final boolean addInterceptors) {
 
     // Create default SSLContext
     final SSLContext sslcontext = SSLContexts.createDefault();
@@ -359,11 +437,15 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
 
     // Setup client builder
     clientBuilder
-        .addInterceptorFirst(this::supportBrotliEncoding)
-        .addInterceptorFirst(this::decompressOnResponse)
         // disconnect requests after 30sec
         .setConnectionTimeToLive(30, TimeUnit.SECONDS)
         .setSSLSocketFactory(sslsf);
+
+    if (addInterceptors) {
+      clientBuilder
+          .addInterceptorFirst(this::supportBrotliEncoding)
+          .addInterceptorFirst(this::decompressOnResponse);
+    }
 
     // Setup our RequestConfigBuilder
 
