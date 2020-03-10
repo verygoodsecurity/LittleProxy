@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <github.global.server>github</github.global.server>
-        <netty.version>4.1.28.Final</netty.version>
+        <netty.version>4.1.44.Final</netty.version>
         <slf4j.version>1.7.24</slf4j.version>
         <java.version>1.8</java.version>
         <java.version.major>8</java.version.major>
@@ -610,7 +610,7 @@
                         <productionBranch>vgs-edition</productionBranch>
                         <developmentBranch>vgs-edition</developmentBranch>
                         <releaseBranchPrefix>release-</releaseBranchPrefix>
-                        <versionTagPrefix></versionTagPrefix>
+                        <versionTagPrefix/>
                     </gitFlowConfig>
                     <commitMessages>
                         <releaseStartMessage>update versions for @{version} release</releaseStartMessage>
