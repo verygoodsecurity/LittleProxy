@@ -13,6 +13,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -91,6 +92,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private final String serverHostAndPort;
     private volatile ChainedProxy chainedProxy;
     private final Queue<ChainedProxy> availableChainedProxies;
+
+    private ChannelPromise lastUpstreamReadProcessed;
 
     /**
      * The filters to apply to response/chunks received from server.
@@ -262,6 +265,8 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
             } else {
                 ReferenceCountUtil.retain(httpResponse);
 
+                lastUpstreamReadProcessed = channel.newPromise();
+
                 proxyServer.getMessageProcessingExecutor()
                     .execute(() -> {
                       try {
@@ -274,6 +279,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                           exceptionCaught(ctx, e);
                       } finally {
                           ReferenceCountUtil.release(httpResponse);
+                          lastUpstreamReadProcessed.setSuccess();
                       }
                     });
             }
@@ -468,7 +474,16 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                 LOG.error("Unable to record connectionFailed", e);
             }
         }
-        clientConnection.serverDisconnected(this);
+        final ProxyToServerConnection serverConnection = this;
+
+        if (lastUpstreamReadProcessed == null) {
+            clientConnection.serverDisconnected(serverConnection);
+        } else {
+            lastUpstreamReadProcessed.addListener(future ->
+                clientConnection.serverDisconnected(serverConnection));
+        }
+
+
     }
 
     @Override
