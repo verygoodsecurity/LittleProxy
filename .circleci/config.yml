@@ -84,7 +84,7 @@ jobs:
   test:
     <<: *job-defaults
     docker:
-    - image: fholzer/nginx-brotli
+    - image: abevoelker/docker-nginx-alpine-brotli
     steps:
       - <<: *attach-workspace
       - <<: *restore-maven-cache
