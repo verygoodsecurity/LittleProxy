@@ -83,11 +83,9 @@ jobs:
 
   test:
     <<: *job-defaults
-    docker:
-      - image: harshavardhanj/nginx-brotli
+    machine:
+      enabled: true
     steps:
-      - checkout
-      - setup_remote_docker
       - <<: *attach-workspace
       - <<: *restore-maven-cache
       - run:
