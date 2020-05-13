@@ -86,7 +86,6 @@ jobs:
     docker:
     - image: abevoelker/docker-nginx-alpine-brotli
     steps:
-      - checkout
       - setup_remote_docker
       - <<: *attach-workspace
       - <<: *restore-maven-cache
