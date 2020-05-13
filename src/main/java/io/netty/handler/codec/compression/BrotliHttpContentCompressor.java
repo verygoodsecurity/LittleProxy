@@ -1,7 +1,5 @@
 package io.netty.handler.codec.compression;
 
-import static io.netty.handler.codec.compression.BrotliHttpContentDecompressor.BR;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpContent;
@@ -9,7 +7,9 @@ import io.netty.handler.codec.http.HttpContentEncoder;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code brotli} encoding while respecting the {@code
@@ -19,6 +19,10 @@ import io.netty.util.AttributeKey;
 public class BrotliHttpContentCompressor extends HttpContentEncoder {
 
   private ChannelHandlerContext ctx;
+
+  public static final AttributeKey<String> CONTENT_COMPRESSION_ATTRIBUTE = AttributeKey.valueOf("contentCompression");
+
+  public static final AsciiString BR = AsciiString.cached("br");
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -34,9 +38,8 @@ public class BrotliHttpContentCompressor extends HttpContentEncoder {
       // Therefore, we should NOT encode here
       return null;
     }
-    Object preferencesConfig = ctx.channel().attr(AttributeKey.valueOf("preferences")).get();
 
-    if (BR.contentEqualsIgnoreCase(acceptEncoding)) {
+    if (acceptEncoding.contains(BR) && brotliCompressionEnabled()) {
       return new Result(
           acceptEncoding,
           new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
@@ -44,5 +47,13 @@ public class BrotliHttpContentCompressor extends HttpContentEncoder {
     }
     // 'identity' or unsupported
     return null;
+  }
+
+  private boolean brotliCompressionEnabled() {
+    String compressionAttribute = ctx.channel().attr(CONTENT_COMPRESSION_ATTRIBUTE).get();
+    if (StringUtils.isEmpty(compressionAttribute)) {
+      return false;
+    }
+    return compressionAttribute.contains(BR.toString());
   }
 }

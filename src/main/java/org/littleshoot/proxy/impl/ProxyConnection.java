@@ -422,8 +422,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      */
     protected void aggregateContentForFiltering(ChannelPipeline pipeline,
             int numberOfBytesToBuffer) {
-        pipeline.addLast("brotli_decompressor", new BrotliHttpContentDecompressor());
-        pipeline.addLast("inflater", new HttpContentDecompressor());
+        pipeline.addLast("inflater", new BrotliHttpContentDecompressor());
         pipeline.addLast("aggregator", new HttpObjectAggregator(
                 numberOfBytesToBuffer));
     }
