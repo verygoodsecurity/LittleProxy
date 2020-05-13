@@ -84,7 +84,7 @@ jobs:
   test:
     <<: *job-defaults
     docker:
-      - image: fholzer/nginx-brotli
+      - image: harshavardhanj/nginx-brotli
     steps:
       - checkout
       - setup_remote_docker
