@@ -83,8 +83,8 @@ jobs:
 
   test:
     <<: *job-defaults
-    machine:
-      enabled: true
+    docker:
+    - image: fholzer/nginx-brotli
     steps:
       - <<: *attach-workspace
       - <<: *restore-maven-cache
