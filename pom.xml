@@ -116,6 +116,15 @@
             </snapshots>
         </repository>
 
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>bintray-brotli-maven</id>
+            <name>bintray</name>
+            <url>https://dl.bintray.com/jaycroaker/maven</url>
+        </repository>
+
     </repositories>
 
     <inceptionYear>2009</inceptionYear>
