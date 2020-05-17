@@ -30,9 +30,9 @@ public class BrotliHttpContentCompressor extends HttpContentEncoder {
   }
 
   @Override
-  protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+  protected Result beginEncode(HttpResponse response, String acceptEncoding) throws Exception {
 
-    String contentEncoding = headers.headers().get(HttpHeaderNames.CONTENT_ENCODING);
+    String contentEncoding = response.headers().get(HttpHeaderNames.CONTENT_ENCODING);
     if (contentEncoding != null) {
       // Content-Encoding was set, either as something specific or as the IDENTITY encoding
       // Therefore, we should NOT encode here
