@@ -20,13 +20,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(DataProviderRunner.class)
-public class BrotliHttpContentDecompressorTest {
+public class GeneralHttpContentDecompressorTest {
 
-  private BrotliHttpContentDecompressor decompressor;
+  private GeneralHttpContentDecompressor decompressor;
 
   @Before
   public void setUp() throws Exception {
-    decompressor = new BrotliHttpContentDecompressor();
+    decompressor = new GeneralHttpContentDecompressor();
     ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
     Channel channel = mock(Channel.class);
     when(channel.metadata()).thenReturn(new ChannelMetadata(false));

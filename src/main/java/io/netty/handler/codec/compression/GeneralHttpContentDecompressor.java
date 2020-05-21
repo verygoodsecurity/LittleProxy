@@ -13,7 +13,7 @@ import io.netty.handler.codec.http.HttpMessage;
  * {@code deflate} encoding. For more information on how this handler modifies the message, please refer to
  * {@link HttpContentDecoder}.
  */
-public class BrotliHttpContentDecompressor extends HttpContentDecompressor {
+public class GeneralHttpContentDecompressor extends HttpContentDecompressor {
 
   @Override
   protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {

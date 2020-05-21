@@ -15,11 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.nixxcode.jvmbrotli.common.BrotliLoader;
 import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -41,10 +38,6 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   private static final InternalLogger log =
       InternalLoggerFactory.getInstance(BrotliDecoder.class);
 
-  static {
-    BrotliLoader.isBrotliAvailable();
-  }
-
   /*
   For how this value is derived, please see: `BROTLI_MAX_NUMBER_OF_BLOCK_TYPES` in these docs:
      - https://github.com/google/brotli/blob/master/c/common/constants.h
@@ -55,57 +48,62 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   public BrotliDecoder() {
   }
 
-  public static byte[] decompress(byte[] compressedArray) throws IOException {
-    if(compressedArray == null) {
-      return null;
-    }
-
-    ByteArrayOutputStream out;
-    try (BrotliInputStream is = new BrotliInputStream(new ByteArrayInputStream(compressedArray))) {
-      out = new ByteArrayOutputStream();
-      if (!decompress(out, is)) {
-        return null;
-      }
-    } catch (IOException e) {
-      log.error("Unhandled exception when decompressing brotli", e);
-      throw e;
-    }
-    return out.toByteArray();
-  }
-
   @Override
   protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
     /*
        use in.alloc().buffer() instead of Unpooled.buffer() as best practice.
        See: https://github.com/netty/netty/wiki/New-and-noteworthy-in-4.0#pooled-buffers
     */
+    boolean success = true;
+    ByteBuf outBuffer = null;
     try (ByteBufOutputStream output = new ByteBufOutputStream(in.alloc().buffer())) {
-      try (BrotliInputStream brotliInputStream = new BrotliInputStream(new ByteBufInputStream(in))) {
-        if (!decompress(output, brotliInputStream)) return;
-      } catch (IOException e) {
-        log.error("Unhandled exception when decompressing brotli", e);
-        throw e;
+      try (ByteBufInputStream bbin = new ByteBufInputStream(in)) {
+        try (BrotliInputStream brotliInputStream = new BrotliInputStream(bbin)) {
+          success = decompress(output, brotliInputStream);
+          if (!success) {
+            return;
+          }
+        } catch (IOException e) {
+          log.error("Unhandled exception when decompressing brotli", e);
+          throw e;
+        }
       }
-      out.add(output.buffer());
+      outBuffer = output.buffer();
+      if (outBuffer.isReadable()) {
+        out.add(outBuffer);
+      } else {
+        success = false;
+      }
+    } finally {
+      if (!success) {
+        if (outBuffer != null) {
+          outBuffer.release();
+        }
+      }
     }
   }
 
-  private static boolean decompress(OutputStream output, BrotliInputStream brotliInputStream) throws IOException {
+  public static boolean decompress(OutputStream output, BrotliInputStream brotliInputStream) {
     byte[] decompressBuffer = new byte[BROTLI_MAX_NUMBER_OF_BLOCK_TYPES];
     // is the stream ready for us to decompress?
     int bytesRead;
     try {
       bytesRead = brotliInputStream.read(decompressBuffer);
+      // continue reading until we have hit EOF
+      while (bytesRead > -1) { // -1 means EOF
+        output.write(decompressBuffer, 0, bytesRead);
+        Arrays.fill(decompressBuffer, (byte) 0);
+        bytesRead = brotliInputStream.read(decompressBuffer);
+      }
+      return true;
     } catch (IOException e) {
+      log.warn("Could not decompress a brotli stream.", e);
       // unexpected end of input, not ready to decompress, so just return
       return false;
+    } catch (RuntimeException e) {
+      log.warn("Could not decompress a brotli stream.", e);
+      // unexpected runtime error
+      return false;
     }
-    // continue reading until we have hit EOF
-    while (bytesRead > -1) { // -1 means EOF
-      output.write(decompressBuffer, 0, bytesRead);
-      Arrays.fill(decompressBuffer, (byte) 0);
-      bytesRead = brotliInputStream.read(decompressBuffer);
-    }
-    return true;
   }
 }

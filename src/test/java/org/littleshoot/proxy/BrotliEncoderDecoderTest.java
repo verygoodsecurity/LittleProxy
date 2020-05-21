@@ -5,8 +5,11 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
 import com.nixxcode.jvmbrotli.common.BrotliLoader;
+import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
 import com.nixxcode.jvmbrotli.enc.Encoder;
 
+import io.netty.handler.codec.compression.BrotliDecoder;
+import java.io.ByteArrayOutputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -53,8 +56,6 @@ import javax.net.ssl.SSLContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import io.netty.handler.codec.compression.BrotliDecoder;
-
 import static java.lang.Float.parseFloat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -99,7 +100,7 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
     BrotliDecompressingEntity(HttpEntity entity) {
       super(entity, inputStream -> {
         byte[] isAsBytes = IOUtils.toByteArray(inputStream);
-        byte[] decompress = BrotliDecoder.decompress(isAsBytes);
+        byte[] decompress = decompressBytes(isAsBytes);
         return new ByteArrayInputStream(decompress);
       });
     }
@@ -256,7 +257,7 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
   @Test
   public void testDecompressBrotliContents() throws IOException {
     byte[] brotliBytes = loadBrotliCompressedSample();
-    byte[] decompressedBytes = BrotliDecoder.decompress(brotliBytes);
+    byte[] decompressedBytes = decompressBytes(brotliBytes);
     byte[] expected = loadUncompressedSample();
     assertArrayEquals("bytes", expected, decompressedBytes);
   }
@@ -269,7 +270,7 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
         .build()) {
       HttpResponse response = runBrotliScenarioWithClient(httpclient);
       byte[] asBytes = EntityUtils.toByteArray(response.getEntity());
-      assertArrayEquals(loadUncompressedSample(), BrotliDecoder.decompress(asBytes));
+      assertArrayEquals(loadUncompressedSample(), decompressBytes(asBytes));
     }
   }
 
@@ -304,16 +305,6 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
       );
     }
   }
-
-//  private HttpClientBuilder decompressOnResponse(final HttpClientBuilder httpClientBuilder) {
-//    httpClientBuilder.addInterceptorFirst(BrotliEncoderDecoderTest::process);
-//    return httpClientBuilder;
-//  }
-
-//  private HttpClientBuilder supportBrotliEncoding(final HttpClientBuilder httpClientBuilder) {
-//    httpClientBuilder.addInterceptorFirst((HttpRequestInterceptor) this::supportBrotliEncoding);
-//    return httpClientBuilder;
-//  }
 
   private HttpResponse runBrotliScenarioWithClient(CloseableHttpClient httpclient) throws IOException, URISyntaxException {
     HttpEntity responseEntity;
@@ -392,4 +383,18 @@ public class BrotliEncoderDecoderTest extends AbstractProxyTest {
     clientBuilder.setDefaultRequestConfig(requestConfigBuilder.build());
   }
 
+  private static byte[] decompressBytes(byte[] compressedArray) throws IOException {
+    if (compressedArray == null) {
+      return null;
+    }
+
+    ByteArrayOutputStream out;
+    try (BrotliInputStream is = new BrotliInputStream(new ByteArrayInputStream(compressedArray))) {
+      out = new ByteArrayOutputStream();
+      if (!BrotliDecoder.decompress(out, is)) {
+        return null;
+      }
+      return out.toByteArray();
+    }
+  }
 }
