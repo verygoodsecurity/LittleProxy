@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.nixxcode.jvmbrotli.common.BrotliLoader;
 import com.nixxcode.jvmbrotli.enc.BrotliOutputStream;
 import com.nixxcode.jvmbrotli.enc.Encoder;
 
@@ -72,6 +73,10 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     this.preferDirect = preferDirect;
     this.compressionQuality = compressionQuality;
     this.windowSize = windowSize;
+    // https://github.com/nixxcode/jvm-brotli#loading-jvm-brotli
+    if (!BrotliLoader.isBrotliAvailable()) {
+      throw new RuntimeException("Brotli encoding is not supported");
+    }
   }
 
   @Override

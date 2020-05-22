@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.nixxcode.jvmbrotli.common.BrotliLoader;
 import com.nixxcode.jvmbrotli.dec.BrotliInputStream;
 
 import java.io.IOException;
@@ -46,6 +47,10 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   private static int BROTLI_MAX_NUMBER_OF_BLOCK_TYPES = 256;
 
   public BrotliDecoder() {
+    // https://github.com/nixxcode/jvm-brotli#loading-jvm-brotli
+    if (!BrotliLoader.isBrotliAvailable()) {
+      throw new RuntimeException("Brotli decoding is not supported");
+    }
   }
 
   @Override
