@@ -19,8 +19,6 @@ import com.nixxcode.jvmbrotli.common.BrotliLoader;
 import com.nixxcode.jvmbrotli.enc.BrotliOutputStream;
 import com.nixxcode.jvmbrotli.enc.Encoder;
 
-import java.io.IOException;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
@@ -83,21 +81,14 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     if (!uncompressed.isReadable() || uncompressed.readableBytes() == 0) {
       return;
     }
-    ByteBufOutputStream dst = new ByteBufOutputStream(uncompressed.alloc().buffer());
-    Encoder.Parameters params = new Encoder.Parameters().setQuality(this.compressionQuality);
-    try {
-      BrotliOutputStream brotliOutputStream = new BrotliOutputStream(dst, params);
-      try {
+    try (ByteBufOutputStream dst = new ByteBufOutputStream(uncompressed.alloc().buffer())) {
+      Encoder.Parameters params = new Encoder.Parameters().setQuality(this.compressionQuality);
+      try (BrotliOutputStream brotliOutputStream = new BrotliOutputStream(dst, params)) {
         brotliOutputStream
             .write(ByteBufUtil.getBytes(uncompressed, uncompressed.readerIndex(), uncompressed.readableBytes(), false));
-      } finally {
         brotliOutputStream.flush();
-        brotliOutputStream.close();
-        out.writeBytes(dst.buffer());
       }
-    } catch (IOException e) {
-      log.error("Unhandled exception when compressing brotli", e);
-      throw e;
+      out.writeBytes(dst.buffer());
     }
   }
 
