@@ -26,14 +26,13 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
-  private static final InternalLogger log =
-      InternalLoggerFactory.getInstance(BrotliEncoder.class);
+  private static final Logger log = LoggerFactory.getLogger(BrotliEncoder.class);
 
   private final boolean preferDirect;
   private final int compressionQuality;
@@ -75,7 +74,7 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     this.windowSize = windowSize;
     // https://github.com/nixxcode/jvm-brotli#loading-jvm-brotli
     if (!BrotliLoader.isBrotliAvailable()) {
-      throw new RuntimeException("Brotli encoding is not supported");
+      throw new CompressionException("Brotli encoding is not supported");
     }
   }
 

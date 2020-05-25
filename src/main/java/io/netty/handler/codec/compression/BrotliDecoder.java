@@ -28,16 +28,15 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
 public class BrotliDecoder extends ByteToMessageDecoder {
 
-  private static final InternalLogger log =
-      InternalLoggerFactory.getInstance(BrotliDecoder.class);
+  private static final Logger log = LoggerFactory.getLogger(BrotliDecoder.class);
 
   /*
   For how this value is derived, please see: `BROTLI_MAX_NUMBER_OF_BLOCK_TYPES` in these docs:
@@ -49,7 +48,7 @@ public class BrotliDecoder extends ByteToMessageDecoder {
   public BrotliDecoder() {
     // https://github.com/nixxcode/jvm-brotli#loading-jvm-brotli
     if (!BrotliLoader.isBrotliAvailable()) {
-      throw new RuntimeException("Brotli decoding is not supported");
+      throw new DecompressionException("Brotli decoding is not supported");
     }
   }
 
@@ -68,15 +67,13 @@ public class BrotliDecoder extends ByteToMessageDecoder {
           if (!success) {
             return;
           }
-        } catch (IOException e) {
-          log.error("Unhandled exception when decompressing brotli", e);
-          throw e;
         }
       }
       outBuffer = output.buffer();
       if (outBuffer.isReadable()) {
         out.add(outBuffer);
       } else {
+        log.warn("Could not read Brotli output.");
         success = false;
       }
     } finally {
