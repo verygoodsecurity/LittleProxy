@@ -78,8 +78,6 @@ import static org.littleshoot.proxy.impl.ConnectionState.HANDSHAKING;
  * </p>
  */
 
-
-
 @Sharable
 public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private final ClientToProxyConnection clientConnection;
