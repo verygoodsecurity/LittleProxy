@@ -597,7 +597,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                             .serverSslEngine(parsedHostAndPort.getHost(), parsedHostAndPort.getPort())));
                 }
 
-                connectionFlow
+            	connectionFlow
                         .then(clientConnection.RespondCONNECTSuccessful)
                         .then(serverConnection.MitmEncryptClientChannel);
             } else {
@@ -694,7 +694,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
                         }
                     }
                 });
-                return future;
+            	return future;
             } else {
                 return writeToChannel(initialRequest);
             }
@@ -911,7 +911,7 @@ public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
 
         pipeline.addLast("encoder", new HttpRequestEncoder());
         pipeline.addLast("decoder", new HeadAwareHttpResponseDecoder(
-                proxyServer.getMaxInitialLineLength(),
+        		proxyServer.getMaxInitialLineLength(),
                 proxyServer.getMaxHeaderSize(),
                 proxyServer.getMaxChunkSize()));
 
