@@ -42,10 +42,6 @@ public class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
   */
   private static final int DEFAULT_COMPRESSION_QUALITY = 4;
 
-  /*
-   If the Brotli encoding is being used to compress streams in real-time,
-   it is not advisable to have a quality setting above 4 due to performance.
-  */
   private static final int DEFAULT_WINDOW_SIZE = -1;
 
 
