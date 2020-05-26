@@ -77,6 +77,7 @@ import static org.littleshoot.proxy.impl.ConnectionState.HANDSHAKING;
  * {@link #initializeConnectionFlow()}.
  * </p>
  */
+
 @Sharable
 public class ProxyToServerConnection extends ProxyConnection<HttpResponse> {
     private final ClientToProxyConnection clientConnection;
