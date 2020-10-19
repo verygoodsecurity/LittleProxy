@@ -804,6 +804,16 @@ abstract class ProxyConnection<I extends HttpObject> extends
                 proxyServer.getGlobalStateHandler().clear();
             }
         }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            try {
+                proxyServer.getGlobalStateHandler().restoreFromChannel(clientToProxyConnection.channel);
+                super.channelInactive(ctx);
+            } finally {
+                proxyServer.getGlobalStateHandler().clear();
+            }
+        }
     }
 
     @Sharable
